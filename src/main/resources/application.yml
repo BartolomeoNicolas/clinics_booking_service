@@ -61,8 +61,12 @@ spring:
       ddl-auto: none
     open-in-view: false
   liquibase:
-    # Sin changelogs todavia: los agrega BOOK-M0-03.
-    enabled: false
+    # Aplicado en el arranque. Ver db/changelog/db.changelog-master.xml.
+    # OJO: no poner `contexts` acá. En Liquibase eso FILTRA los changesets que
+    # no lleven esa etiqueta, en vez de activarlos: la app levanta sin error y
+    # no crea ninguna tabla.
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.xml
   data:
     redis:
       host: ${REDIS_HOST:localhost}
