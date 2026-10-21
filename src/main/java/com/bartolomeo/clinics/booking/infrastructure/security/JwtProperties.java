@@ -1,5 +1,7 @@
 package com.bartolomeo.clinics.booking.infrastructure.security;
 
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -40,6 +42,14 @@ public class JwtProperties {
 
     /** Cuando vale {@code true}, el par se regenera en el arranque. */
     private boolean rotate;
+
+    /**
+     * Origenes permitidos por CORS.
+     *
+     * <p>Lista explicita, nunca comodin: cualquier cliente web que se agregue tiene que
+     * estar declarado aca.
+     */
+    private List<String> allowedOrigins = List.of();
 
     /**
      * Tamano del par RSA en bits.
