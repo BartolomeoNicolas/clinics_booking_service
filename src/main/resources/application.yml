@@ -1,0 +1,75 @@
+# Configuración base de clinics_booking_service.
+#
+# Los secretos NO van acá. A partir de BOOK-M0-02 se leen del entorno y de
+# ~/.config/clinics/secrets/ (enunciado §5, H9).
+
+spring:
+  application:
+    name: clinics-booking-service
+  profiles:
+    default: dev
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+# Perfil de desarrollo local.
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/clinics_booking
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      # El esquema es de Liquibase, nunca de Hibernate. Vease BOOK-M0-03.
+      ddl-auto: none
+    open-in-view: false
+  liquibase:
+    # Sin changelogs todavia: los agrega BOOK-M0-03.
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    com.bartolomeo.clinics: DEBUG
+
+---
+# Perfil de tests.
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    # Lo reemplaza el contenedor de Testcontainers que se levanta en los tests.
+    url: jdbc:postgresql://localhost:5432/clinics_booking_test
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+logging:
+  level:
+    com.bartolomeo.clinics: INFO
