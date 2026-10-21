@@ -1,26 +1,32 @@
 package com.bartolomeo.clinics.booking;
 
+import com.bartolomeo.clinics.booking.infrastructure.config.RequiredSecretsInitializer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * Servicio de turnos y reservas.
  *
- * <p>Bounded contexts: {@code user} (registro, login y emisión del JWT de sesión),
- * {@code availability} (cálculo de slots disponibles) y {@code reservation} (procesos,
- * reservas y su máquina de estados).
+ * <p>Bounded contexts: {@code user} (registro, login y emision del JWT de sesion),
+ * {@code availability} (calculo de slots disponibles) y {@code reservation} (procesos,
+ * reservas y su maquina de estados).
  *
- * <p>Este servicio es el dueño de la identidad de usuario: emite el JWT de sesión.
- * El servicio de catálogo solo lo valida con la clave pública (decisión D-4 del plan maestro).
+ * <p>Este servicio es el dueno de la identidad de usuario: emite el JWT de sesion.
+ * El servicio de catalogo solo lo valida con la clave publica (decision D-4 del plan maestro).
  *
- * <p>La estructura sigue las convenciones del repo de referencia del profesor
+ * <p>La estructura de cada contexto sigue las convenciones del repo de referencia del profesor
  * {@code dqmdz/hexagonal}: los ports {@code in} viven en {@code domain/ports/in}, no en
- * {@code application}. Ver {@code docs/hexagonal-profesor.md}.
+ * {@code application}.
  */
 @SpringBootApplication
 public class BookingServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(BookingServiceApplication.class, args);
+
+        // Corre antes de crear beans: si falta un secreto, el arranque para aca
+        // nombrando la variable, en vez de morir en el driver de la base.
+        SpringApplication app = new SpringApplication(BookingServiceApplication.class);
+        app.addInitializers(new RequiredSecretsInitializer());
+        app.run(args);
     }
 }

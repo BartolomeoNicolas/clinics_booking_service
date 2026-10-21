@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- ================================================================
+         Usuario y autoridades.
+
+         El enunciado §3.2 pide que el modelo de usuario sea compatible con
+         el de JHipster, sin obligar a usar JHipster. Se implementan los
+         MISMOS datos y comportamientos observables:
+
+         - mismos campos: login, password, firstName, lastName, email,
+           imageUrl, langKey, mas activacion y auditoria;
+         - la contrasena se guarda hasheada, nunca en claro;
+         - el usuario queda activo de inmediato, sin verificacion por correo;
+         - las autoridades las administra el backend.
+
+         Los nombres de tabla son propios: `app_user` en vez de `jhi_user`.
+         Estas tablas son privadas de este servicio y nadie externo las ve,
+         asi que el nombre no tiene por que coincidir.
+         ================================================================ -->
+
+    <changeSet id="003-01-app-user" author="nicobartok0">
+        <createTable tableName="app_user">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_app_user" nullable="false"/>
+            </column>
+            <column name="login" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_app_user_login"/>
+            </column>
+            <!-- Nombre de columna propio: la base es privada. Nunca en claro. -->
+            <column name="password_hash" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="first_name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(254)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_app_user_email"/>
+            </column>
+            <column name="image_url" type="VARCHAR(255)"/>
+            <column name="lang_key" type="VARCHAR(10)" defaultValue="es">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Activo de inmediato: el enunciado no pide verificacion por correo. -->
+            <column name="activated" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)"/>
+            <column name="created_date" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="003-02-authority" author="nicobartok0">
+        <createTable tableName="authority">
+            <column name="name" type="VARCHAR(50)">
+                <constraints primaryKey="true" primaryKeyName="pk_authority"
+                             nullable="false"/>
+            </column>
+        </createTable>
+
+        <insert tableName="authority">
+            <column name="name" value="ROLE_USER"/>
+        </insert>
+        <insert tableName="authority">
+            <column name="name" value="ROLE_ADMIN"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="003-03-user-authority" author="nicobartok0">
+        <createTable tableName="user_authority">
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="authority_name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="user_authority" baseColumnNames="user_id"
+                constraintName="fk_user_authority_user"
+                referencedTableName="app_user" referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+                baseTableName="user_authority" baseColumnNames="authority_name"
+                constraintName="fk_user_authority_authority"
+                referencedTableName="authority" referencedColumnNames="name"/>
+    </changeSet>
+
+    <changeSet id="003-04-user-external-id" author="nicobartok0">
+        <!--
+          Identificador estable del usuario ante la catedra.
+
+          El contrato dice que la catedra no conoce las cuentas finales de la
+          aplicacion: nuestra app le manda un `externalPatientId` opaco. Este
+          es el mapeo entre ese identificador y nuestro usuario interno (H12).
+        -->
+        <createTable tableName="user_external_id">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_user_external_id"
+                             nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_user_external_id_user"/>
+            </column>
+            <column name="external_patient_id" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_user_external_id_external"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="user_external_id" baseColumnNames="user_id"
+                constraintName="fk_user_external_id_user"
+                referencedTableName="app_user" referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>
