@@ -1,6 +1,6 @@
 package com.bartolomeo.clinics.booking.user.application.exception;
-import com.bartolomeo.clinics.booking.application.exception.ApplicationException;
-import com.bartolomeo.clinics.booking.application.exception.ErrorCode;
+import com.bartolomeo.clinics.booking.shared.application.exception.ApplicationException;
+import com.bartolomeo.clinics.booking.shared.application.exception.ErrorCode;
 
 
 /**

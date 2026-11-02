@@ -3,8 +3,8 @@ package com.bartolomeo.clinics.booking;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.bartolomeo.clinics.booking.infrastructure.persistence.entity.UserEntity;
-import com.bartolomeo.clinics.booking.infrastructure.persistence.repository.JpaUserRepository;
+import com.bartolomeo.clinics.booking.user.infrastructure.persistence.entity.UserEntity;
+import com.bartolomeo.clinics.booking.user.infrastructure.persistence.repository.JpaUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,8 +1,8 @@
 package com.bartolomeo.clinics.booking;
 
-import com.bartolomeo.clinics.booking.infrastructure.web.dto.LoginRequest;
-import com.bartolomeo.clinics.booking.infrastructure.web.dto.RegisterRequest;
-import com.bartolomeo.clinics.booking.infrastructure.web.mapper.AuthDtoMapper;
+import com.bartolomeo.clinics.booking.user.infrastructure.web.dto.LoginRequest;
+import com.bartolomeo.clinics.booking.user.infrastructure.web.dto.RegisterRequest;
+import com.bartolomeo.clinics.booking.user.infrastructure.web.mapper.AuthDtoMapper;
 import com.bartolomeo.clinics.booking.user.application.exception.EmailAlreadyTakenException;
 import com.bartolomeo.clinics.booking.user.application.exception.LoginAlreadyTakenException;
 import com.bartolomeo.clinics.booking.user.domain.model.RegistrationData;
