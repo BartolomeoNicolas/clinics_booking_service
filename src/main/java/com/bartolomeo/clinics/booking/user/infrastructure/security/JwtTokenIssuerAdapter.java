@@ -19,7 +19,9 @@ import org.springframework.stereotype.Component;
  * Emite el token de sesion con RS256.
  *
  * <p>El token lleva los permisos del usuario, para que el servicio de catalogo pueda
- * autorizar sin volver a consultarlo.
+ * autorizar sin volver a consultarlo, y su id, para que cuando este servicio le hable a
+ * otro pueda llevar puesto de quien se trata sin mandarlo por un parametro que cualquiera
+ * puede reescribir por el camino.
  */
 @Component
 @RequiredArgsConstructor
@@ -44,6 +46,14 @@ public class JwtTokenIssuerAdapter implements TokenIssuerPort {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .claim("login", user.getLogin())
+                // El id viaja firmado y no como parametro suelto. Es el que despues se
+                // propaga adentro del JWT tecnico cuando turnos le habla al catalogo
+                // (vease ServiceTokenIssuer): un id dentro de un token con nuestra firma
+                // no lo puede alterar nadie que no tenga la clave privada, mientras que
+                // un id mandado en la URL lo puede reescribir quien este en el medio.
+                // Y si no lo hubiera, que no lo hubiera: un claim ausente se propaga
+                // ausente, pero no se rellena con cero.
+                .claim("userId", user.getId())
                 .claim("authorities", user.getRoles() == null
                         ? List.of()
                         : user.getRoles().stream().map(Enum::name).toList())

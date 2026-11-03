@@ -18,6 +18,18 @@ public abstract class ApplicationException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    /**
+     * Con la causa original adjunta.
+     *
+     * <p>Hace falta cuando el fallo viene de afuera —una llamada HTTP, por ejemplo—: sin la
+     * causa, el 503 dice que el catálogo no está disponible pero no si fue una conexión
+     * rechazada, un timeout o un 500, que son tres cosas distintas para diagnosticar.
+     */
+    protected ApplicationException(ErrorCode errorCode, String message, Throwable cause) {
+        super(message, cause);
+        this.errorCode = errorCode;
+    }
+
     public ErrorCode getErrorCode() {
         return errorCode;
     }

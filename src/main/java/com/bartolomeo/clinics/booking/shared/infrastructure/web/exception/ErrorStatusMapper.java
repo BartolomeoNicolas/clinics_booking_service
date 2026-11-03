@@ -27,6 +27,9 @@ public final class ErrorStatusMapper {
             Map.entry(ErrorCode.EMAIL_ALREADY_TAKEN, HttpStatus.CONFLICT),
             Map.entry(ErrorCode.INVALID_CREDENTIALS, HttpStatus.UNAUTHORIZED),
             Map.entry(ErrorCode.USER_NOT_FOUND, HttpStatus.NOT_FOUND),
+            Map.entry(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND),
+            Map.entry(ErrorCode.CATALOG_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE),
+            Map.entry(ErrorCode.CATALOG_REJECTED, HttpStatus.SERVICE_UNAVAILABLE),
             Map.entry(ErrorCode.INTERNAL_ERROR, HttpStatus.INTERNAL_SERVER_ERROR));
 
     private ErrorStatusMapper() {

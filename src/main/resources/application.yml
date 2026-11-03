@@ -41,6 +41,19 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+clinics:
+  catalog:
+    # URL del servicio de catalogo. En los tests de contrato se pisa desde afuera
+    # para apuntar a WireMock. Es el unico valor de este bloque que no cambia por
+    # perfil: hacia donde apunta un servicio es lo mismo en dev y en produccion.
+    base-url: ${CLINICS_CATALOG_BASE_URL:http://localhost:8081}
+    # Identidad de este servicio dentro del JWT tecnico que se le manda al catalogo.
+    service-name: ${CLINICS_CATALOG_SERVICE_NAME:clinics-booking}
+    # Un catalogo caido no puede dejar a turnos colgado. Se traduce en
+    # catalog-unavailable (503) con la causa original adjunta.
+    connect-timeout-ms: ${CLINICS_CATALOG_CONNECT_TIMEOUT_MS:2000}
+    read-timeout-ms: ${CLINICS_CATALOG_READ_TIMEOUT_MS:5000}
+
 ---
 # Perfil de desarrollo local.
 spring:

@@ -8,8 +8,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Servicio de turnos y reservas.
  *
  * <p>Bounded contexts: {@code user} (registro, login y emision del JWT de sesion),
- * {@code availability} (calculo de slots disponibles) y {@code reservation} (procesos,
- * reservas y su maquina de estados).
+ * {@code catalog} (lectura del catalogo, por HTTP y sin persistir nada), {@code availability}
+ * (calculo de slots disponibles) y {@code reservation} (procesos, reservas y su maquina de
+ * estados).
  *
  * <p>Este servicio es el dueno de la identidad de usuario: emite el JWT de sesion.
  * El servicio de catalogo solo lo valida con la clave publica (decision D-4 del plan maestro).
