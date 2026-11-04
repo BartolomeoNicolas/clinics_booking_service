@@ -30,6 +30,7 @@ public enum ErrorCode {
     EXTERNAL_PATIENT_MISMATCH("external-patient-mismatch", "Paciente distinto al de la reserva"),
     ALREADY_CONFIRMED("already-confirmed", "Proceso ya confirmado"),
     NOT_CANCELLABLE("not-cancellable", "Reserva no cancelable"),
+    INVALID_STATE_TRANSITION("invalid-state-transition", "Transición de estado no válida"),
     CATEDRA_REJECTED("catedra-rejected", "La cátedra rechazó la credencial"),
     CATEDRA_UNAVAILABLE("catedra-unavailable", "Servicio de la cátedra no disponible"),
     CATALOG_UNAVAILABLE("catalog-unavailable", "Catálogo no disponible"),

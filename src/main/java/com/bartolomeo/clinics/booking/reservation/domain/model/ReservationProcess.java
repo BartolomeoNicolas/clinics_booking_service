@@ -1,8 +1,10 @@
 package com.bartolomeo.clinics.booking.reservation.domain.model;
 
+import com.bartolomeo.clinics.booking.reservation.domain.ReservationStateMachine;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Optional;
 
 /**
  * Un proceso de reserva: el seguimiento local de lo que el usuario pidió y de lo que la cátedra
@@ -85,45 +87,70 @@ public record ReservationProcess(
     }
 
     /**
+     * Aplica un evento y devuelve el proceso en el estado nuevo.
+     *
+     * <p><strong>Devuelve vacío cuando el evento no aplica.</strong> El dominio no depende
+     * de la capa de aplicación (R1), así que no puede lanzar la excepción del error: lo
+     * devuelve vacío y es la capa de aplicación la que lo convierte en error. Así queda
+     * clarísimo en el código qué es una regla de negocio y qué es un problema del pedido.
+     *
+     * @param event evento que ocurrió
+     * @param now   instante del cambio
+     * @return el proceso en el estado nuevo, o vacío si la transición no existe
+     */
+    public Optional<ReservationProcess> apply(ReservationEvent event, Instant now) {
+        return apply(event, now, null);
+    }
+
+    /**
+     * Aplica un evento, dejando escrito por qué si el evento es un fallo.
+     *
+     * @param event  evento que ocurrió
+     * @param now    instante del cambio
+     * @param reason motivo del fallo; solo se guarda si el evento es {@code FAILED}
+     * @return el proceso en el estado nuevo, o vacío si la transición no existe
+     */
+    public Optional<ReservationProcess> apply(ReservationEvent event, Instant now, String reason) {
+        return ReservationStateMachine.nextState(state, event)
+                .map(nuevo -> copy(
+                        nuevo,
+                        holdId,
+                        catedraProcessId,
+                        expiresAt,
+                        nuevo == ReservationState.FAILED ? reason : failureReason,
+                        now));
+    }
+
+    /**
      * La cátedra tomó el turno: hay retén, con su identificador y su vencimiento.
      *
      * @param holdId           retén que creó la cátedra
      * @param catedraProcessId proceso que creó la cátedra
      * @param expiresAt        vencimiento que da la cátedra
      * @param now              instante del cambio
+     * @return el proceso con el retén, o vacío si el estado actual no admitía este paso
      */
-    public ReservationProcess holdCreated(
+    public Optional<ReservationProcess> holdCreated(
             String holdId, String catedraProcessId, Instant expiresAt, Instant now) {
 
-        return copy(ReservationState.HOLD_CREATED, holdId, catedraProcessId, expiresAt, null, now);
+        return apply(ReservationEvent.HOLD_CREATED, now)
+                .map(nuevo -> copy(
+                        nuevo.state(),
+                        holdId,
+                        catedraProcessId,
+                        expiresAt,
+                        nuevo.failureReason(),
+                        now));
     }
 
     /**
      * La cátedra confirmó el retén: la reserva existe y espera el teléfono.
      *
      * @param now instante del cambio
+     * @return el proceso esperando el teléfono, o vacío si el estado actual no admitía este paso
      */
-    public ReservationProcess waitingForPhone(Instant now) {
-        return copy(ReservationState.WAITING_FOR_PHONE, holdId, catedraProcessId, expiresAt, null, now);
-    }
-
-    /**
-     * El flujo no pudo completarse.
-     *
-     * @param reason por qué, en palabras que alguien pueda leer después
-     * @param now    instante del cambio
-     */
-    public ReservationProcess failed(String reason, Instant now) {
-        return copy(ReservationState.FAILED, holdId, catedraProcessId, expiresAt, reason, now);
-    }
-
-    /**
-     * El proceso venció antes de completarse.
-     *
-     * @param now instante del cambio
-     */
-    public ReservationProcess expired(Instant now) {
-        return copy(ReservationState.EXPIRED, holdId, catedraProcessId, expiresAt, failureReason, now);
+    public Optional<ReservationProcess> waitingForPhone(Instant now) {
+        return apply(ReservationEvent.INITIAL_CONFIRMATION, now);
     }
 
     /** Copia del proceso con el estado y los datos que cambian. */

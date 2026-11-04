@@ -29,6 +29,7 @@ import com.bartolomeo.clinics.booking.catedra.domain.model.OccupancyStatus;
 import com.bartolomeo.clinics.booking.catedra.domain.ports.out.CatedraAppointmentsPort;
 import com.bartolomeo.clinics.booking.reservation.application.exception.MissingIdempotencyKeyException;
 import com.bartolomeo.clinics.booking.reservation.application.exception.ReservationHoldUnreconcilableException;
+import com.bartolomeo.clinics.booking.reservation.application.service.ReservationTransitions;
 import com.bartolomeo.clinics.booking.reservation.application.usecases.CreateReservationUseCaseImpl;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
@@ -82,7 +83,8 @@ class CreateReservationUseCaseImplTest {
     private final Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
 
     private final CreateReservationUseCase useCase =
-            new CreateReservationUseCaseImpl(repository, catedra, getUser, clock);
+            new CreateReservationUseCaseImpl(
+                    repository, catedra, getUser, new ReservationTransitions(), clock);
 
     // ---------------------------------------------------------------- helpers
 

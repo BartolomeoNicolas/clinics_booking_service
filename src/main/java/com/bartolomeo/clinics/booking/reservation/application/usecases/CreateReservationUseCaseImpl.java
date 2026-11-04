@@ -14,8 +14,10 @@ import com.bartolomeo.clinics.booking.catedra.domain.ports.out.CatedraAppointmen
 import com.bartolomeo.clinics.booking.reservation.application.exception.DuplicateReservationRequestException;
 import com.bartolomeo.clinics.booking.reservation.application.exception.MissingIdempotencyKeyException;
 import com.bartolomeo.clinics.booking.reservation.application.exception.ReservationHoldUnreconcilableException;
+import com.bartolomeo.clinics.booking.reservation.application.service.ReservationTransitions;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ExternalPatientId;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEvent;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.CreateReservationUseCase;
@@ -76,6 +78,7 @@ public class CreateReservationUseCaseImpl implements CreateReservationUseCase {
     private final ReservationProcessRepository repository;
     private final CatedraAppointmentsPort catedra;
     private final GetUserUseCase getUser;
+    private final ReservationTransitions transitions;
     private final Clock clock;
 
     @Override
@@ -124,13 +127,18 @@ public class CreateReservationUseCaseImpl implements CreateReservationUseCase {
         try {
             if (actual.state() == ReservationState.INITIATED) {
                 AppointmentHold hold = crearReten(actual);
-                actual = repository.save(actual.holdCreated(
-                        hold.holdId(), hold.reservationProcessId(), hold.expiresAt(), now()));
+                actual = repository.save(transitions.holdCreated(
+                        actual,
+                        hold.holdId(),
+                        hold.reservationProcessId(),
+                        hold.expiresAt(),
+                        now()));
             }
 
             if (actual.state() == ReservationState.HOLD_CREATED) {
                 confirmarReten(actual, user, patientId);
-                actual = repository.save(actual.waitingForPhone(now()));
+                actual = repository.save(transitions.apply(
+                        actual, ReservationEvent.INITIAL_CONFIRMATION, now()));
             }
         } catch (CatedraUnavailableException sinCatedra) {
             // La cátedra no está. El proceso no falló: quedó a medio hacer, y un reintento
@@ -264,11 +272,12 @@ public class CreateReservationUseCaseImpl implements CreateReservationUseCase {
      * dos casos el estado es final y el motivo queda para que se pueda explicar después.
      */
     private ApplicationException marcarFallo(ReservationProcess proceso, ApplicationException fallo) {
-        if (fallo instanceof HoldExpiredException || fallo instanceof HoldNotFoundException) {
-            repository.save(proceso.expired(now()));
-        } else {
-            repository.save(proceso.failed(fallo.getMessage(), now()));
-        }
+        ReservationEvent evento =
+                (fallo instanceof HoldExpiredException || fallo instanceof HoldNotFoundException)
+                        ? ReservationEvent.EXPIRED
+                        : ReservationEvent.FAILED;
+
+        repository.save(transitions.apply(proceso, evento, now(), fallo.getMessage()));
         return fallo;
     }
 

@@ -35,6 +35,7 @@ public final class ErrorStatusMapper {
             Map.entry(ErrorCode.EXTERNAL_PATIENT_MISMATCH, HttpStatus.BAD_REQUEST),
             Map.entry(ErrorCode.ALREADY_CONFIRMED, HttpStatus.CONFLICT),
             Map.entry(ErrorCode.NOT_CANCELLABLE, HttpStatus.CONFLICT),
+            Map.entry(ErrorCode.INVALID_STATE_TRANSITION, HttpStatus.CONFLICT),
             Map.entry(ErrorCode.CATEDRA_REJECTED, HttpStatus.SERVICE_UNAVAILABLE),
             Map.entry(ErrorCode.CATEDRA_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE),
             Map.entry(ErrorCode.CATALOG_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE),

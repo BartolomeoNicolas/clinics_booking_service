@@ -126,8 +126,9 @@ class ReservationProcessPersistenceTest {
         Long userId = creaUsuario();
 
         ReservationProcess guardado = repository.save(
-                proceso(userId, "clave-1").holdCreated(
-                        "hold-6c0c2f41", "process-a92b47d0", VENCE, AHORA));
+                proceso(userId, "clave-1")
+                        .holdCreated("hold-6c0c2f41", "process-a92b47d0", VENCE, AHORA)
+                        .orElseThrow());
 
         assertThat(guardado.id()).isNotNull();
 
