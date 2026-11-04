@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!--
+      Esquema propio del servicio de turnos y reservas.
+
+      NO hay ninguna tabla de catalogo en este esquema, y no la puede haber:
+      el enunciado (H4) prohibe que este servicio replique el catalogo, y la
+      separacion de datos (evidencia 10 del §11) se demuestra con el esquema.
+
+      El catalogo se consulta por REST contra clinics_sync_service.
+    -->
+
+    <include file="db/changelog/001-user-tables.xml"/>
+    <include file="db/changelog/002-reservation-tables.xml"/>
+
+</databaseChangeLog>
