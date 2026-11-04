@@ -17,5 +17,6 @@
 
     <include file="db/changelog/001-user-tables.xml"/>
     <include file="db/changelog/002-reservation-tables.xml"/>
+    <include file="db/changelog/003-reservation-process-state.xml"/>
 
 </databaseChangeLog>

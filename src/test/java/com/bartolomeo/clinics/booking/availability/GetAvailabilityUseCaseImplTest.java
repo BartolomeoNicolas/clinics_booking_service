@@ -71,8 +71,8 @@ class GetAvailabilityUseCaseImplTest {
     @DisplayName("rechaza el rango invertido antes de preguntarle a nadie")
     void rangoInvertidoSeRechaza() {
         var error = catchThrowableOfType(
-                () -> useCase.getAvailability(PROFESIONAL, MARTES, LUNES),
-                InvalidAvailabilityRangeException.class);
+                InvalidAvailabilityRangeException.class,
+                () -> useCase.getAvailability(PROFESIONAL, MARTES, LUNES));
 
         assertThat(error.getMessage().contains(LUNES.toString())).isTrue();
         verifyNoInteractions(catalog, catedra);
@@ -84,8 +84,8 @@ class GetAvailabilityUseCaseImplTest {
         when(catalog.getProfessional(PROFESIONAL)).thenReturn(Optional.empty());
 
         var error = catchThrowableOfType(
-                () -> useCase.getAvailability(PROFESIONAL, LUNES, MARTES),
-                ProfessionalNotFoundException.class);
+                ProfessionalNotFoundException.class,
+                () -> useCase.getAvailability(PROFESIONAL, LUNES, MARTES));
 
         assertThat(error).isNotNull();
         verify(catalog, never()).getWeeklySchedules(PROFESIONAL);
