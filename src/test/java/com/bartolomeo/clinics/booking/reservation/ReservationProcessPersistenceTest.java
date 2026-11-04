@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import com.bartolomeo.clinics.booking.reservation.application.exception.DuplicateReservationRequestException;
+import com.bartolomeo.clinics.booking.reservation.domain.model.Reservation;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationProcessRepository;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationRepository;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.entity.ReservationProcessEntity;
+import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.repository.JpaReservationRepository;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.repository.JpaReservationProcessRepository;
 import com.bartolomeo.clinics.booking.user.infrastructure.persistence.entity.UserEntity;
 import com.bartolomeo.clinics.booking.user.infrastructure.persistence.repository.JpaUserRepository;
@@ -66,6 +69,12 @@ class ReservationProcessPersistenceTest {
     private JpaReservationProcessRepository jpaRepository;
 
     @Autowired
+    private ReservationRepository reservations;
+
+    @Autowired
+    private JpaReservationRepository jpaReservations;
+
+    @Autowired
     private JpaUserRepository usuarios;
 
     private static Path tempKeyDir() {
@@ -98,6 +107,9 @@ class ReservationProcessPersistenceTest {
 
     @BeforeEach
     void limpia() {
+        // Las reservas van primero: referencian al proceso y la base no deja borrar un
+        // proceso que todavía tiene una reserva colgando.
+        jpaReservations.deleteAll();
         jpaRepository.deleteAll();
         usuarios.deleteAll();
     }
@@ -204,5 +216,29 @@ class ReservationProcessPersistenceTest {
 
         assertThat(entity.getStatus()).isEqualTo(ReservationState.INITIATED);
         assertThat(entity.getStatus().name()).isEqualTo("INITIATED");
+    }
+
+    @Test
+    @DisplayName("la reserva guardada vuelve con su identificador de la catedra y sus nombres")
+    void guardaLaReserva() {
+        Long userId = creaUsuario();
+        Long processId = repository.save(proceso(userId, "clave-6")).id();
+
+        Reservation reserva = new Reservation(
+                null, 8251L, processId, userId, 15L, DIA, HORA, null, "CONFIRMED",
+                "Ana", "Gomez", "Nicolás", "Bartolomeo", AHORA);
+
+        Reservation guardada = reservations.save(reserva);
+        assertThat(guardada.id()).isNotNull();
+
+        Reservation leida = reservations.findByProcessId(processId).orElseThrow();
+        assertThat(leida.catedraReservationId()).isEqualTo(8251L);
+        assertThat(leida.professionalFirstName()).isEqualTo("Ana");
+        assertThat(leida.professionalLastName()).isEqualTo("Gomez");
+        assertThat(leida.patientFirstName()).isEqualTo("Nicolás");
+        assertThat(leida.status()).isEqualTo("CONFIRMED");
+        assertThat(leida.createdAt()).isEqualTo(AHORA);
+
+        assertThat(reservations.findByCatedraReservationId(8251L)).isPresent();
     }
 }

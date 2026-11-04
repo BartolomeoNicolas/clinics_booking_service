@@ -15,11 +15,13 @@ import com.bartolomeo.clinics.booking.reservation.application.exception.InvalidR
 import com.bartolomeo.clinics.booking.reservation.application.exception.UnknownReservationProcessException;
 import com.bartolomeo.clinics.booking.reservation.application.service.ReservationTransitions;
 import com.bartolomeo.clinics.booking.reservation.application.usecases.ProcessReservationEventUseCaseImpl;
+import com.bartolomeo.clinics.booking.reservation.domain.model.Reservation;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEvent;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEventEnvelope;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.ProcessReservationEventUseCase;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ProcessedEventRepository;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationProcessRepository;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationRepository;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import java.time.Clock;
@@ -31,6 +33,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
 /**
@@ -49,11 +52,12 @@ class ProcessReservationEventUseCaseImplTest {
     private static final LocalTime HORA = LocalTime.of(9, 30);
 
     private final ReservationProcessRepository repository = mock(ReservationProcessRepository.class);
+    private final ReservationRepository reservations = mock(ReservationRepository.class);
     private final ProcessedEventRepository processedEvents = mock(ProcessedEventRepository.class);
     private final Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
 
     private final ProcessReservationEventUseCase useCase = new ProcessReservationEventUseCaseImpl(
-            repository, processedEvents, new ReservationTransitions(), clock);
+            repository, reservations, processedEvents, new ReservationTransitions(), clock);
 
     private static ReservationProcess proceso(ReservationState estado) {
         return new ReservationProcess(
@@ -65,7 +69,7 @@ class ProcessReservationEventUseCaseImplTest {
 
     private static ReservationEventEnvelope envelope(String eventId, ReservationEvent evento) {
         return new ReservationEventEnvelope(
-                eventId, evento, "process-a92b47d0", 1, AHORA);
+                eventId, evento, "process-a92b47d0", 1, AHORA, 8251L, null);
     }
 
     @BeforeEach
@@ -117,7 +121,8 @@ class ProcessReservationEventUseCaseImplTest {
         var error = catchThrowableOfType(
                 UnknownReservationProcessException.class,
                 () -> useCase.process(new ReservationEventEnvelope(
-                        "evento-4", ReservationEvent.CONFIRMED, "process-ajeno", 1, AHORA)));
+                        "evento-4", ReservationEvent.CONFIRMED, "process-ajeno", 1, AHORA,
+                        8251L, null)));
 
         assertThat(error).isNotNull();
         verify(repository, never()).save(any(ReservationProcess.class));
@@ -136,5 +141,71 @@ class ProcessReservationEventUseCaseImplTest {
 
         assertThat(error).isNotNull();
         verify(repository, never()).save(any(ReservationProcess.class));
+    }
+
+    @Test
+    @DisplayName("un evento tardio no reabre un proceso cerrado")
+    void unEventoTardioNoReabreUnProcesoCerrado() {
+        when(repository.findByCatedraProcessId("process-a92b47d0"))
+                .thenReturn(Optional.of(proceso(ReservationState.EXPIRED)));
+
+        var error = catchThrowableOfType(
+                InvalidReservationTransitionException.class,
+                () -> useCase.process(envelope("evento-6", ReservationEvent.CONFIRMED)));
+
+        assertThat(error).isNotNull();
+        verify(repository, never()).save(any(ReservationProcess.class));
+        verify(reservations, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("una confirmacion deja la reserva guardada")
+    void unaConfirmacionDejaLaReservaGuardada() {
+        when(reservations.findByProcessId(7L)).thenReturn(Optional.empty());
+
+        useCase.process(envelope("evento-7", ReservationEvent.CONFIRMED));
+
+        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
+        verify(reservations).save(captor.capture());
+
+        Reservation reserva = captor.getValue();
+        assertThat(reserva.catedraReservationId()).isEqualTo(8251L);
+        assertThat(reserva.processId()).isEqualTo(7L);
+        assertThat(reserva.userId()).isEqualTo(42L);
+        assertThat(reserva.professionalId()).isEqualTo(15L);
+        assertThat(reserva.date()).isEqualTo(DIA);
+        assertThat(reserva.startTime()).isEqualTo(HORA);
+        assertThat(reserva.status()).isEqualTo("CONFIRMED");
+    }
+
+    @Test
+    @DisplayName("una confirmacion repetida no deja una segunda reserva")
+    void unaConfirmacionRepetidaNoDejaUnaSegundaReserva() {
+        when(reservations.findByProcessId(7L)).thenReturn(Optional.of(
+                new Reservation(
+                        1L, 8251L, 7L, 42L, 15L, DIA, HORA, null, "CONFIRMED",
+                        null, null, null, null, AHORA)));
+
+        useCase.process(envelope("evento-8", ReservationEvent.CONFIRMED));
+
+        verify(reservations, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("una cancelacion cambia el estado de la reserva")
+    void unaCancelacionCambiaElEstadoDeLaReserva() {
+        when(repository.findByCatedraProcessId("process-a92b47d0"))
+                .thenReturn(Optional.of(proceso(ReservationState.CONFIRMED)));
+        when(reservations.findByProcessId(7L)).thenReturn(Optional.of(
+                new Reservation(
+                        1L, 8251L, 7L, 42L, 15L, DIA, HORA, null, "CONFIRMED",
+                        null, null, null, null, AHORA)));
+
+        useCase.process(envelope("evento-9", ReservationEvent.CANCELLED));
+
+        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
+        verify(reservations).save(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo("CANCELLED");
+        assertThat(captor.getValue().createdAt()).isEqualTo(AHORA);
     }
 }

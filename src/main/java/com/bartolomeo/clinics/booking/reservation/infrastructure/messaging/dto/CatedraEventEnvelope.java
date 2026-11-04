@@ -20,6 +20,10 @@ import java.time.Instant;
  * @param reservationProcessId proceso de la cátedra al que pertenece
  * @param occurredAt           cuándo ocurrió, según la cátedra
  * @param schemaVersion        versión del contrato con la que se escribió
+ * @param reservationId        identificador de la reserva en la cátedra; lo traen los
+ *                             eventos de resultado final
+ * @param reason               por qué, según la cátedra; lo traen los eventos que pueden
+ *                             fallar
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record CatedraEventEnvelope(
@@ -27,5 +31,7 @@ public record CatedraEventEnvelope(
         String eventType,
         String reservationProcessId,
         Instant occurredAt,
-        Integer schemaVersion) {
+        Integer schemaVersion,
+        Long reservationId,
+        String reason) {
 }

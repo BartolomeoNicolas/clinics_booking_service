@@ -126,8 +126,22 @@ public record ReservationProcess(
                         catedraProcessId,
                         requestEventId,
                         expiresAt,
-                        nuevo == ReservationState.FAILED ? reason : failureReason,
+                        motivoPara(nuevo, reason),
                         now));
+    }
+
+    /**
+     * El motivo que queda escrito para el estado nuevo.
+     *
+     * <p><strong>Solo en los estados que cuentan qué pasó.</strong> Un fallo, un rechazo y un
+     * proceso inválido tienen motivo; los demás estados no, y en ellos el motivo anterior
+     * se conserva para no perder lo que se sabía.
+     */
+    private String motivoPara(ReservationState nuevo, String reason) {
+        boolean conMotivo = nuevo == ReservationState.FAILED
+                || nuevo == ReservationState.INVALID
+                || nuevo == ReservationState.REJECTED;
+        return conMotivo && reason != null ? reason : failureReason;
     }
 
     /**

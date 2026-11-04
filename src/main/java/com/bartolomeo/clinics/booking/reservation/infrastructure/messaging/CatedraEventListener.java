@@ -93,7 +93,9 @@ public class CatedraEventListener {
                 evento.get(),
                 envelope.reservationProcessId(),
                 envelope.schemaVersion(),
-                envelope.occurredAt());
+                envelope.occurredAt(),
+                envelope.reservationId(),
+                envelope.reason());
 
         try {
             processEvent.process(paraElDominio);

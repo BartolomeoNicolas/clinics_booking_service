@@ -19,11 +19,17 @@ import java.time.Instant;
  * @param reservationProcessId proceso de la cátedra al que pertenece
  * @param schemaVersion        versión del contrato con la que se escribió el evento
  * @param occurredAt           cuándo ocurrió, según la cátedra
+ * @param catedraReservationId identificador de la reserva en la cátedra; solo lo traen los
+ *                             eventos de resultado final
+ * @param reason               por qué, según la cátedra; solo lo traen los eventos que
+ *                             pueden fallar
  */
 public record ReservationEventEnvelope(
         String eventId,
         ReservationEvent event,
         String reservationProcessId,
         int schemaVersion,
-        Instant occurredAt) {
+        Instant occurredAt,
+        Long catedraReservationId,
+        String reason) {
 }
