@@ -1,0 +1,62 @@
+package com.bartolomeo.clinics.booking.reservation.application.usecases;
+
+import com.bartolomeo.clinics.booking.reservation.application.exception.UnknownReservationProcessException;
+import com.bartolomeo.clinics.booking.reservation.application.service.ReservationTransitions;
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEventEnvelope;
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.in.ProcessReservationEventUseCase;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ProcessedEventRepository;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationProcessRepository;
+import java.time.Clock;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Aplica un evento de la cátedra al proceso que le corresponde.
+ *
+ * <p><strong>La idempotencia va por el {@code eventId}.</strong> Kafka entrega al menos una
+ * vez, así que el mismo mensaje puede llegar dos veces: la segunda vez el evento ya está en
+ * la lista de procesados y no vuelve a tocar el proceso. Es la evidencia de idempotencia que
+ * pide el enunciado.
+ *
+ * <p><strong>El evento se busca por el proceso de la cátedra.</strong> Es el identificador
+ * que ella da y el único que aparece en el mensaje. Un evento de un proceso que este
+ * servicio no conoce no se aplica a ninguno: se rechaza, porque aplicarlo a cualquier otro
+ * proceso sería inventar a quién pertenece.
+ *
+ * <p><strong>El efecto y la anotación del evento van en la misma transacción.</strong> O se
+ * aplica el evento y se anota, o no se hace ninguna de las dos cosas. Si se anotara antes,
+ * una caída entre las dos cosas dejaría el evento marcado como aplicado sin haberlo aplicado,
+ * y nunca volvería a llegar.
+ */
+@Component
+@RequiredArgsConstructor
+public class ProcessReservationEventUseCaseImpl implements ProcessReservationEventUseCase {
+
+    private final ReservationProcessRepository repository;
+    private final ProcessedEventRepository processedEvents;
+    private final ReservationTransitions transitions;
+    private final Clock clock;
+
+    @Override
+    @Transactional
+    public void process(ReservationEventEnvelope envelope) {
+
+        if (processedEvents.existsByEventId(envelope.eventId())) {
+            // Ya se aplico una vez. Repetir el efecto seria un error, no una precaution.
+            return;
+        }
+
+        ReservationProcess proceso = repository
+                .findByCatedraProcessId(envelope.reservationProcessId())
+                .orElseThrow(() -> new UnknownReservationProcessException(
+                        envelope.reservationProcessId()));
+
+        ReservationProcess actualizado =
+                transitions.apply(proceso, envelope.event(), clock.instant());
+
+        repository.save(actualizado);
+        processedEvents.save(envelope.eventId(), envelope.schemaVersion());
+    }
+}

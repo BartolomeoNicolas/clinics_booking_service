@@ -13,6 +13,10 @@ spring:
   profiles:
     default: dev
 
+  kafka:
+    # Broker de la catedra. Lo da la catedra en el documento de integracion.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
   config:
     import:
       # .env local del repo, leido como properties. "optional" porque el archivo
@@ -83,6 +87,21 @@ clinics:
     # operacion con efectos haya fallado (anexo 18.4), asi que las escrituras no
     # se repiten nunca desde el cliente.
     read-retries: ${CATEDRA_READ_RETRIES:2}
+
+    # Kafka de la catedra. Los topics los crea la catedra y llevan nuestro groupId.
+    kafka:
+      # El consumidor se puede apagar para levantar el servicio sin Kafka (por
+      # ejemplo, en un entorno donde todavia no hay broker de pruebas).
+      enabled: ${CATEDRA_KAFKA_ENABLED:true}
+      actions-topic: ${CATEDRA_ACTIONS_TOPIC:alumnos.turnos.acciones.nicobartok0-prog2}
+      phone-topic: ${CATEDRA_PHONE_TOPIC:catedra.turnos.telefono.nicobartok0-prog2}
+      # Un grupo por servicio: si dos servicios compartieran el grupo, se repartirian
+      # los mensajes y cada uno recibiria la mitad.
+      consumer-group: ${CATEDRA_CONSUMER_GROUP:clinics-booking}
+      # Reintentos con tope ante un error recuperable. Acotados a proposito: un error
+      # que se repite no se arregla insistiendo.
+      retries: ${CATEDRA_KAFKA_RETRIES:3}
+      retry-interval-ms: ${CATEDRA_KAFKA_RETRY_INTERVAL_MS:1000}
 
 ---
 # Perfil de desarrollo local.

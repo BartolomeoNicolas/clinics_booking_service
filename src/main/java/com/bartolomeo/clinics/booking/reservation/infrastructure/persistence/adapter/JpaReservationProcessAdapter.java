@@ -44,6 +44,12 @@ public class JpaReservationProcessAdapter implements ReservationProcessRepositor
     }
 
     @Override
+    public Optional<ReservationProcess> findByCatedraProcessId(String catedraProcessId) {
+        return jpaReservationProcessRepository.findByCatedraProcessId(catedraProcessId)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public ReservationProcess save(ReservationProcess process) {
         ReservationProcessEntity entity = mapper.toEntity(process);
         try {

@@ -21,4 +21,12 @@ public interface JpaReservationProcessRepository
      * @return el proceso, si existe
      */
     Optional<ReservationProcessEntity> findByUserIdAndRequestKey(Long userId, String requestKey);
+
+    /**
+     * El proceso por el identificador que le dio la cátedra.
+     *
+     * @param catedraProcessId proceso de la cátedra
+     * @return el proceso, si existe
+     */
+    Optional<ReservationProcessEntity> findByCatedraProcessId(String catedraProcessId);
 }

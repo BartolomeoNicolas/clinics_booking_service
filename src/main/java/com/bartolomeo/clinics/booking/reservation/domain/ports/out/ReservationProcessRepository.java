@@ -35,6 +35,18 @@ public interface ReservationProcessRepository {
     Optional<ReservationProcess> findById(long id);
 
     /**
+     * El proceso por el identificador que le dio la cátedra.
+     *
+     * <p><strong>Es el que aparece en los mensajes de Kafka.</strong> La cátedra no conoce
+     * los identificadores locales, así que el proceso se busca por el suyo; el local es
+     * para la app.
+     *
+     * @param catedraProcessId proceso de la cátedra
+     * @return el proceso, o vacío si esta cátedra no es la dueña de ese proceso
+     */
+    Optional<ReservationProcess> findByCatedraProcessId(String catedraProcessId);
+
+    /**
      * Guarda el proceso.
      *
      * @param process proceso a guardar
