@@ -67,6 +67,10 @@ public class ReservationProcessEntity {
     @Column(name = "catedra_process_id", length = 64)
     private String catedraProcessId;
 
+    /** El evento de la cátedra que pidió el teléfono: es el que hay que responder. */
+    @Column(name = "request_event_id", length = 128)
+    private String requestEventId;
+
     /** El vencimiento que dio la cátedra; local no se recalcula ni se extiende. */
     @Column(name = "expires_at")
     private Instant expiresAt;

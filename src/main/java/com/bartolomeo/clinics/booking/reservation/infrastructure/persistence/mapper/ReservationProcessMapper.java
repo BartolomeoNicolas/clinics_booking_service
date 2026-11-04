@@ -32,6 +32,7 @@ public class ReservationProcessMapper {
                 .startTime(process.startTime())
                 .holdId(process.holdId())
                 .catedraProcessId(process.catedraProcessId())
+                .requestEventId(process.requestEventId())
                 .expiresAt(process.expiresAt())
                 .requestKey(process.requestKey())
                 .failureReason(process.failureReason())
@@ -58,6 +59,7 @@ public class ReservationProcessMapper {
                 entity.getStatus(),
                 entity.getHoldId(),
                 entity.getCatedraProcessId(),
+                entity.getRequestEventId(),
                 entity.getExpiresAt(),
                 entity.getRequestKey(),
                 entity.getFailureReason(),

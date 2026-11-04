@@ -3,6 +3,7 @@ package com.bartolomeo.clinics.booking.reservation.application.service;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.CreateReservationUseCase;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.in.SubmitPhoneUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 public class ReservationService {
 
     private final CreateReservationUseCase createReservationUseCase;
+    private final SubmitPhoneUseCase submitPhoneUseCase;
 
     /**
      * Inicia un proceso de reserva para el usuario de la sesión.
@@ -34,5 +36,21 @@ public class ReservationService {
      */
     public ReservationProcess create(String login, ReservationData data) {
         return createReservationUseCase.create(login, data);
+    }
+
+    /**
+     * Manda el teléfono de un proceso que está esperando la información.
+     *
+     * @param processId identificador local del proceso
+     * @param login    usuario de la sesión
+     * @param phone    teléfono como lo escribió el usuario
+     * @return el proceso, ya esperando el resultado
+     * @throws com.bartolomeo.clinics.booking.reservation.application.exception.InvalidPhoneNumberException
+     *         si el teléfono no cumple el formato que acepta la cátedra
+     * @throws com.bartolomeo.clinics.booking.reservation.application.exception.ReservationProcessNotFoundException
+     *         si el proceso no existe o no es de ese usuario
+     */
+    public ReservationProcess submitPhone(long processId, String login, String phone) {
+        return submitPhoneUseCase.submitPhone(processId, login, phone);
     }
 }

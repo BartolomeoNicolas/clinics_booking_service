@@ -81,4 +81,21 @@ public class ReservationTransitions {
                 .orElseThrow(() -> new InvalidReservationTransitionException(
                         process.state(), ReservationEvent.HOLD_CREATED));
     }
+
+    /**
+     * El proceso pasa a esperar el teléfono y guarda el evento que hay que responder.
+     *
+     * @param process       proceso en su estado actual
+     * @param requestEventId evento de la cátedra que pidió el teléfono
+     * @param now           instante del cambio
+     * @return el proceso esperando el teléfono
+     * @throws InvalidReservationTransitionException si el estado actual no admitía la espera
+     */
+    public ReservationProcess waitingForPhone(
+            ReservationProcess process, String requestEventId, Instant now) {
+
+        return process.waitingForPhone(now, requestEventId)
+                .orElseThrow(() -> new InvalidReservationTransitionException(
+                        process.state(), ReservationEvent.INITIAL_CONFIRMATION));
+    }
 }

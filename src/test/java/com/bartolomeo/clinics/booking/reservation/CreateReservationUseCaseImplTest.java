@@ -121,6 +121,7 @@ class CreateReservationUseCaseImplTest {
                 proceso.state(),
                 proceso.holdId(),
                 proceso.catedraProcessId(),
+                proceso.requestEventId(),
                 proceso.expiresAt(),
                 proceso.requestKey(),
                 proceso.failureReason(),
@@ -205,7 +206,7 @@ class CreateReservationUseCaseImplTest {
         ReservationProcess yaHecho = new ReservationProcess(
                 7L, USER_ID, PACIENTE, PROFESIONAL, DIA, HORA,
                 ReservationState.WAITING_FOR_PHONE, "hold-6c0c2f41", "process-a92b47d0",
-                VENCE, CLAVE, null, AHORA, AHORA);
+                "request-event-8a31", VENCE, CLAVE, null, AHORA, AHORA);
         when(repository.findByRequestKey(USER_ID, CLAVE)).thenReturn(Optional.of(yaHecho));
 
         ReservationProcess proceso = useCase.create(LOGIN, datos());
@@ -220,7 +221,8 @@ class CreateReservationUseCaseImplTest {
     void laMismaClaveContinuaElProcesoQueQuedoAMedias() {
         ReservationProcess aMedias = new ReservationProcess(
                 7L, USER_ID, PACIENTE, PROFESIONAL, DIA, HORA,
-                ReservationState.INITIATED, null, null, null, CLAVE, null, AHORA, AHORA);
+                ReservationState.INITIATED, null, null, null, null,
+                CLAVE, null, AHORA, AHORA);
         when(repository.findByRequestKey(USER_ID, CLAVE)).thenReturn(Optional.of(aMedias));
         laCatedraAceptaElTurno();
 
@@ -363,7 +365,7 @@ class CreateReservationUseCaseImplTest {
         ReservationProcess aMedias = new ReservationProcess(
                 7L, USER_ID, PACIENTE, PROFESIONAL, DIA, HORA,
                 ReservationState.HOLD_CREATED, "hold-6c0c2f41", "process-a92b47d0",
-                VENCE, CLAVE, null, AHORA, AHORA);
+                "request-event-8a31", VENCE, CLAVE, null, AHORA, AHORA);
         when(repository.findByRequestKey(USER_ID, CLAVE)).thenReturn(Optional.of(aMedias));
         when(catedra.confirmHold(anyString(), anyString(), anyString(), anyString()))
                 .thenThrow(new HoldExpiredException("hold-6c0c2f41"));

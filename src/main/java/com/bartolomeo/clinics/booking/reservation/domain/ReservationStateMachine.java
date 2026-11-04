@@ -93,8 +93,11 @@ public final class ReservationStateMachine {
                 Map.entry(ReservationEvent.INVALID, ReservationState.INVALID),
                 Map.entry(ReservationEvent.FAILED, ReservationState.FAILED)));
 
-        // La reserva existe y espera el teléfono.
+        // La reserva existe y espera el teléfono. La confirmación inicial también es válida
+        // desde acá: la cátedra puede pedir el teléfono después de que el REST ya dijera
+        // que lo estaba esperando, y ese evento es el que hay que responder después.
         tabla.put(ReservationState.WAITING_FOR_PHONE, transiciones(
+                Map.entry(ReservationEvent.INITIAL_CONFIRMATION, ReservationState.WAITING_FOR_PHONE),
                 Map.entry(ReservationEvent.PHONE_SUBMITTED, ReservationState.PHONE_SUBMITTED),
                 Map.entry(ReservationEvent.PHONE_REJECTED, ReservationState.REJECTED),
                 Map.entry(ReservationEvent.CONFIRMED, ReservationState.CONFIRMED),

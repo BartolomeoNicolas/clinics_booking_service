@@ -28,6 +28,15 @@ import org.springframework.validation.annotation.Validated;
 public class CatedraKafkaProperties {
 
     /**
+     * Grupo de la cuenta técnica.
+     *
+     * <p>Es el mismo {@code groupId} que aparece en los topics y que va en el mensaje que
+     * este servicio publica: es cómo la cátedra sabe de qué cuenta es el mensaje.
+     */
+    @NotBlank(message = "falta el groupId de la cuenta tecnica: definí CATEDRA_GROUP_ID")
+    private String groupId;
+
+    /**
      * Topic donde la cátedra publica los eventos de turnos.
      *
      * <p>Es el que consume este servicio.
@@ -68,4 +77,12 @@ public class CatedraKafkaProperties {
      * tienen que seguir ese orden.
      */
     private long retryIntervalMs = 500L;
+
+    /**
+     * Cuánto se espera a que el broker acepte un mensaje, en milisegundos.
+     *
+     * <p>Se espera de verdad: mandar en asíncrono y seguir de largo dejaría un proceso
+     * diciendo "el teléfono salió" cuando el mensaje puede haberse perdido.
+     */
+    private long sendTimeoutMs = 5000L;
 }

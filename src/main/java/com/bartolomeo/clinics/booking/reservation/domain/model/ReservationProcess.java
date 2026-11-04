@@ -18,9 +18,14 @@ import java.util.Optional;
  *
  * <p><strong>Los identificadores de la cátedra se guardan, no se inventan.</strong> El
  * {@code holdId} y el {@code reservationProcessId} son los que la cátedra dio, y el
- * {@code expiresAt} es el suyo: la vigencia real la determina la cátedra y una copia local no
- * la extiende (enunciado §7). Guardar el vencimiento no es guardar una copia del retén, es
+ * {@code expiresAt} es el suyo: la vigencia real la determina la cátedra y una copia local
+ * no la extiende (enunciado §7). Guardar el vencimiento no es guardar una copia del retén, es
  * anotar cuándo deja de servir para no prometer más de lo que hay.
+ *
+ * <p><strong>El {@code requestEventId} es el evento que hay que responder.</strong> Cuando la
+ * cátedra pide el teléfono, manda un evento con su propio identificador, y la respuesta
+ * tiene que llevar ese identificador adentro. Guardarlo es lo que permite responder una
+ * sola vez y con la referencia correcta.
  *
  * <p><strong>El usuario va con el proceso.</strong> Es lo que hace que un usuario solo vea y
  * cancele los procesos propios (enunciado §9), y por eso el identificador del paciente se
@@ -36,6 +41,7 @@ import java.util.Optional;
  * @param state              estado del proceso
  * @param holdId             retén de la cátedra; nulo hasta que lo crea
  * @param catedraProcessId   proceso de la cátedra; nulo hasta que lo crea
+ * @param requestEventId     evento de la cátedra que pidió el teléfono; hay que responderlo
  * @param expiresAt          vencimiento, el de la cátedra; nulo hasta que lo sepa
  * @param requestKey         clave de idempotencia de la solicitud
  * @param failureReason      por qué falló, si falló
@@ -52,6 +58,7 @@ public record ReservationProcess(
         ReservationState state,
         String holdId,
         String catedraProcessId,
+        String requestEventId,
         Instant expiresAt,
         String requestKey,
         String failureReason,
@@ -77,6 +84,7 @@ public record ReservationProcess(
                 data.date(),
                 data.startTime(),
                 ReservationState.INITIATED,
+                null,
                 null,
                 null,
                 null,
@@ -116,6 +124,7 @@ public record ReservationProcess(
                         nuevo,
                         holdId,
                         catedraProcessId,
+                        requestEventId,
                         expiresAt,
                         nuevo == ReservationState.FAILED ? reason : failureReason,
                         now));
@@ -138,19 +147,34 @@ public record ReservationProcess(
                         nuevo.state(),
                         holdId,
                         catedraProcessId,
+                        nuevo.requestEventId(),
                         expiresAt,
                         nuevo.failureReason(),
                         now));
     }
 
     /**
-     * La cátedra confirmó el retén: la reserva existe y espera el teléfono.
+     * La cátedra pidió el teléfono: la reserva existe y hay que responderle.
      *
-     * @param now instante del cambio
+     * <p><strong>Guarda el evento que hay que responder.</strong> La respuesta con el
+     * teléfono lleva el identificador de este evento adentro, y sin guardarlo no se podría
+     * mandar: el mensaje saldría sin la referencia que la cátedra usa para saber a qué
+     * pedido responde.
+     *
+     * @param now            instante del cambio
+     * @param requestEventId evento de la cátedra que pidió el teléfono
      * @return el proceso esperando el teléfono, o vacío si el estado actual no admitía este paso
      */
-    public Optional<ReservationProcess> waitingForPhone(Instant now) {
-        return apply(ReservationEvent.INITIAL_CONFIRMATION, now);
+    public Optional<ReservationProcess> waitingForPhone(Instant now, String requestEventId) {
+        return apply(ReservationEvent.INITIAL_CONFIRMATION, now)
+                .map(nuevo -> copy(
+                        nuevo.state(),
+                        nuevo.holdId(),
+                        nuevo.catedraProcessId(),
+                        requestEventId == null ? nuevo.requestEventId() : requestEventId,
+                        nuevo.expiresAt(),
+                        nuevo.failureReason(),
+                        now));
     }
 
     /** Copia del proceso con el estado y los datos que cambian. */
@@ -158,6 +182,7 @@ public record ReservationProcess(
             ReservationState state,
             String holdId,
             String catedraProcessId,
+            String requestEventId,
             Instant expiresAt,
             String failureReason,
             Instant updatedAt) {
@@ -172,6 +197,7 @@ public record ReservationProcess(
                 state,
                 holdId,
                 catedraProcessId,
+                requestEventId,
                 expiresAt,
                 requestKey,
                 failureReason,

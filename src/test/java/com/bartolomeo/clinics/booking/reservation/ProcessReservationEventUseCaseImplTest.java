@@ -58,7 +58,8 @@ class ProcessReservationEventUseCaseImplTest {
     private static ReservationProcess proceso(ReservationState estado) {
         return new ReservationProcess(
                 7L, 42L, "user-42", 15L, DIA, HORA, estado,
-                "hold-6c0c2f41", "process-a92b47d0", AHORA.plusSeconds(600),
+                "hold-6c0c2f41", "process-a92b47d0", "request-event-8a31",
+                AHORA.plusSeconds(600),
                 "clave-1", null, AHORA, AHORA);
     }
 

@@ -53,6 +53,9 @@ class ReservationStateMachineTest {
                     ReservationState.FAILED),
 
             // La reserva existe y espera el telefono.
+            new Transicion(ReservationState.WAITING_FOR_PHONE,
+                    ReservationEvent.INITIAL_CONFIRMATION,
+                    ReservationState.WAITING_FOR_PHONE),
             new Transicion(ReservationState.WAITING_FOR_PHONE, ReservationEvent.PHONE_SUBMITTED,
                     ReservationState.PHONE_SUBMITTED),
             new Transicion(ReservationState.WAITING_FOR_PHONE, ReservationEvent.PHONE_REJECTED,

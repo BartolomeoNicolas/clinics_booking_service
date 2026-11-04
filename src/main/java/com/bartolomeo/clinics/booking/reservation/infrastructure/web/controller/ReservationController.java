@@ -5,12 +5,14 @@ import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.CreateReservationRequest;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.ReservationProcessResponse;
+import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.SubmitPhoneRequest;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.mapper.ReservationDtoMapper;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -53,5 +55,28 @@ public class ReservationController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(reservationDtoMapper.toResponse(process));
+    }
+
+    /**
+     * Manda el teléfono de un proceso que está esperando la información.
+     *
+     * <p><strong>El proceso es del usuario de la sesión.</strong> No hay un parámetro que
+     * diga de quién es: sale del token, y el caso de uso se encarga de que un proceso ajeno
+     * se responda igual que uno que no existe.
+     *
+     * <p><strong>El resultado todavía no está.</strong> Lo que sale ahora es que el mensaje
+     * se publicó; si la cátedra acepta el teléfono o lo rechaza llega después por Kafka, y
+     * el proceso se entera por ahí.
+     */
+    @PostMapping("/{processId}/phone")
+    public ResponseEntity<ReservationProcessResponse> submitPhone(
+            Principal principal,
+            @PathVariable("processId") long processId,
+            @Valid @RequestBody SubmitPhoneRequest request) {
+
+        ReservationProcess process = reservationService.submitPhone(
+                processId, principal.getName(), request.phoneNumber());
+
+        return ResponseEntity.ok(reservationDtoMapper.toResponse(process));
     }
 }

@@ -93,6 +93,9 @@ clinics:
       # El consumidor se puede apagar para levantar el servicio sin Kafka (por
       # ejemplo, en un entorno donde todavia no hay broker de pruebas).
       enabled: ${CATEDRA_KAFKA_ENABLED:true}
+      # El groupId de la cuenta tecnica: va en los topics y en el mensaje que
+      # este servicio publica.
+      group-id: ${CATEDRA_GROUP_ID:nicobartok0-prog2}
       actions-topic: ${CATEDRA_ACTIONS_TOPIC:alumnos.turnos.acciones.nicobartok0-prog2}
       phone-topic: ${CATEDRA_PHONE_TOPIC:catedra.turnos.telefono.nicobartok0-prog2}
       # Un grupo por servicio: si dos servicios compartieran el grupo, se repartirian
@@ -102,6 +105,7 @@ clinics:
       # que se repite no se arregla insistiendo.
       retries: ${CATEDRA_KAFKA_RETRIES:3}
       retry-interval-ms: ${CATEDRA_KAFKA_RETRY_INTERVAL_MS:1000}
+      send-timeout-ms: ${CATEDRA_KAFKA_SEND_TIMEOUT_MS:5000}
 
 ---
 # Perfil de desarrollo local.

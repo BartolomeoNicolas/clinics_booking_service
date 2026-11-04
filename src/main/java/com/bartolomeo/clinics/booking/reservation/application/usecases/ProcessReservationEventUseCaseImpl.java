@@ -2,6 +2,7 @@ package com.bartolomeo.clinics.booking.reservation.application.usecases;
 
 import com.bartolomeo.clinics.booking.reservation.application.exception.UnknownReservationProcessException;
 import com.bartolomeo.clinics.booking.reservation.application.service.ReservationTransitions;
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEvent;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEventEnvelope;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.ProcessReservationEventUseCase;
@@ -53,8 +54,11 @@ public class ProcessReservationEventUseCaseImpl implements ProcessReservationEve
                 .orElseThrow(() -> new UnknownReservationProcessException(
                         envelope.reservationProcessId()));
 
-        ReservationProcess actualizado =
-                transitions.apply(proceso, envelope.event(), clock.instant());
+        ReservationProcess actualizado = envelope.event() == ReservationEvent.INITIAL_CONFIRMATION
+                // La cátedra pide el teléfono con un evento propio, y ese evento es el que
+                // hay que responder después: su identificador queda guardado en el proceso.
+                ? transitions.waitingForPhone(proceso, envelope.eventId(), clock.instant())
+                : transitions.apply(proceso, envelope.event(), clock.instant());
 
         repository.save(actualizado);
         processedEvents.save(envelope.eventId(), envelope.schemaVersion());
