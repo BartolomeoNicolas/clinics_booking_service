@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- ================================================================
+         Turnos y reservas.
+
+         Estados del proceso, segun el diagrama de reserva del contrato
+         (anexo §17) y los eventos de Kafka:
+
+           HELD                sepidio el hold a la catedra
+           WAITING_FOR_PHONE  la catedra pidio el telefono
+           CONFIRMED          reserva confirmada
+           REJECTED           rechazo reintentable hasta expiresAt
+           EXPIRED            el proceso vencio
+           INVALID            la catedra lo dio por invalido
+           CANCELLED          cancelado por el usuario
+         ================================================================ -->
+
+    <changeSet id="004-01-reservation-process" author="nicobartok0">
+        <createTable tableName="reservation_process">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_reservation_process"
+                             nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(32)" defaultValue="HELD">
+                <constraints nullable="false"/>
+            </column>
+            <column name="professional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="appointment_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_time" type="TIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hold_id" type="VARCHAR(64)"/>
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="reservation_process" baseColumnNames="user_id"
+                constraintName="fk_reservation_process_user"
+                referencedTableName="app_user" referencedColumnNames="id"/>
+
+        <createIndex indexName="idx_reservation_process_user" tableName="reservation_process">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex indexName="idx_reservation_process_status" tableName="reservation_process">
+            <column name="status"/>
+        </createIndex>
+        <createIndex indexName="idx_reservation_process_expires" tableName="reservation_process">
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="004-02-reservation" author="nicobartok0">
+        <createTable tableName="reservation">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_reservation"
+                             nullable="false"/>
+            </column>
+            <column name="process_id" type="BIGINT">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_reservation_process"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="professional_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="appointment_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_time" type="TIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_time" type="TIME"/>
+            <column name="status" type="VARCHAR(32)" defaultValue="CONFIRMED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="reservation" baseColumnNames="process_id"
+                constraintName="fk_reservation_process"
+                referencedTableName="reservation_process" referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+                baseTableName="reservation" baseColumnNames="user_id"
+                constraintName="fk_reservation_user"
+                referencedTableName="app_user" referencedColumnNames="id"/>
+
+        <createIndex indexName="idx_reservation_user" tableName="reservation">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="004-03-reservation-event" author="nicobartok0">
+        <!--
+          Historial de eventos de un proceso de reserva, para trazabilidad.
+
+          La deduplicacion de verdad vive en `processed_event`: el `eventId` es
+          la clave funcional que impide aplicar dos veces el mismo mensaje
+          (anexo §16, entrega al menos una vez). Acá queda el detalle de que
+          evento le tocó a que proceso.
+        -->
+        <createTable tableName="reservation_event">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_reservation_event"
+                             nullable="false"/>
+            </column>
+            <column name="process_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_id" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_type" type="VARCHAR(48)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="received_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="reservation_event" baseColumnNames="process_id"
+                constraintName="fk_reservation_event_process"
+                referencedTableName="reservation_process" referencedColumnNames="id"/>
+
+        <createIndex indexName="idx_reservation_event_process" tableName="reservation_event">
+            <column name="process_id"/>
+        </createIndex>
+        <createIndex indexName="idx_reservation_event_event" tableName="reservation_event">
+            <column name="event_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="004-04-processed-event" author="nicobartok0">
+        <!--
+          Registro de idempotencia: los `eventId` ya aplicados.
+
+          La clave primaria es lo que impide el segundo efecto cuando Kafka
+          entrega el mismo mensaje dos veces.
+        -->
+        <createTable tableName="processed_event">
+            <column name="event_id" type="VARCHAR(128)">
+                <constraints primaryKey="true" primaryKeyName="pk_processed_event"
+                             nullable="false"/>
+            </column>
+            <column name="schema_version" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="processed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="004-05-failed-event" author="nicobartok0">
+        <!--
+          Mensajes que no se pudieron procesar y quedaron estacionados.
+
+          Se consultan para diagnostico; no se reintentan solos.
+        -->
+        <createTable tableName="failed_event">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" primaryKeyName="pk_failed_event"
+                             nullable="false"/>
+            </column>
+            <column name="event_id" type="VARCHAR(128)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_failed_event_event"/>
+            </column>
+            <column name="event_type" type="VARCHAR(48)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error_message" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="004-06-reservation-checks" author="nicobartok0">
+        <!--
+          Los CHECK van con SQL y no con `addCheckConstraint` porque ese
+          elemento no existe en la edicion community de Liquibase: es funcion
+          Pro, y el XSD de la 5.0 lo rechaza y la app no levanta.
+        -->
+        <sql>
+            ALTER TABLE reservation_process
+                ADD CONSTRAINT ck_reservation_process_status CHECK (
+                    status IN ('HELD', 'WAITING_FOR_PHONE', 'CONFIRMED', 'REJECTED',
+                               'EXPIRED', 'INVALID', 'CANCELLED')
+                );
+            ALTER TABLE reservation
+                ADD CONSTRAINT ck_reservation_status CHECK (
+                    status IN ('CONFIRMED', 'CANCELLED')
+                );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
