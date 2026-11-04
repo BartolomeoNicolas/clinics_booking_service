@@ -31,6 +31,16 @@ public final class CatedraRestMapper {
     }
 
     public static Occupancy toOccupancy(OccupanciesResponse.OccupancyItem item) {
+        if (item.date() == null || item.startTime() == null || item.status() == null) {
+            // Una ocupación sin día ni hora de inicio no dice en qué lugar de la agenda está,
+            // y no emparejarla con ningún turno pasaría por un hueco que efectivamente está
+            // tomado. Se corta acá, en el borde del contrato: del otro lado no se puede
+            // arreglar algo que no se entiende, y quedarse tranquilamente con lo que sí se
+            // entiende sería irse con la mitad de la lista de ocupaciones.
+            throw new CatedraUnavailableException(
+                    "La cátedra devolvió una ocupación incompleta en "
+                            + item.date() + " " + item.startTime() + ".");
+        }
         return new Occupancy(item.date(), item.startTime(), item.status(), item.expiresAt());
     }
 
