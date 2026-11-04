@@ -8,10 +8,13 @@ import com.bartolomeo.clinics.booking.shared.application.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -57,16 +60,41 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiProblemDetail> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
 
-        List<ApiProblemDetail.FieldError> fieldErrors = ex.getBindingResult()
-                .getFieldErrors().stream()
-                .map(error -> new ApiProblemDetail.FieldError(
-                        error.getField(),
-                        error.getDefaultMessage(),
-                        error.getRejectedValue() == null ? null : error.getRejectedValue().toString()))
-                .toList();
+        return respond(ErrorCode.VALIDATION_ERROR, "La solicitud tiene campos inválidos.",
+                request, fieldErrors(ex.getBindingResult()));
+    }
+
+    /**
+     * Errores de validacion al atar parametros de query a un DTO.
+     *
+     * <p><strong>Es el caso de {@code @Valid @ModelAttribute}, y no es lo mismo que el de
+     * arriba.</strong> Los campos de un GET que no cierran —una fecha ausente, un rango mal
+     * escrito— se juntan en un {@code BindException}, y esa excepcion <em>madre</em> de la
+     * anterior no la cubre el handler de arriba: sin esta fila caeria en el {@code 500}
+     * generico, y un parametro mal formado del cliente nunca es un error nuestro.
+     */
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiProblemDetail> handleBind(
+            BindException ex, HttpServletRequest request) {
 
         return respond(ErrorCode.VALIDATION_ERROR, "La solicitud tiene campos inválidos.",
-                request, fieldErrors);
+                request, fieldErrors(ex.getBindingResult()));
+    }
+
+    /**
+     * Un parametro que no convierte al tipo esperado: {@code /api/professionals/abc/...},
+     * {@code ?from=ayer}.
+     *
+     * <p>Tampoco es un {@code 500}. El mensaje se queda corto —no se le dice al cliente qué
+     * campo falló, porque el tipo no se pudo ni construir— pero el status y el codigo si
+     * dicen que es problema de quien mando el pedido.
+     */
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<ApiProblemDetail> handleTypeMismatch(
+            TypeMismatchException ex, HttpServletRequest request) {
+
+        return respond(ErrorCode.VALIDATION_ERROR, "La solicitud tiene un parámetro mal formado.",
+                request, List.of());
     }
 
     /** Validacion de los parametros del metodo, no del cuerpo. */
@@ -109,6 +137,22 @@ public class GlobalExceptionHandler {
 
         return respond(ErrorCode.INTERNAL_ERROR, "Ocurrió un error no previsto.",
                 request, List.of());
+    }
+
+    /**
+     * Los campos que fallaron, tal como los reporta el {@code BindingResult}.
+     *
+     * <p>Compartido entre las dos formas de validación, porque la respuesta al cliente es la
+     * misma en las dos: el campo, qué esperaba y qué llegó. El valor rechazado se manda como
+     * texto y no como objeto para que no dependa de cómo serializa cada tipo.
+     */
+    private List<ApiProblemDetail.FieldError> fieldErrors(BindingResult result) {
+        return result.getFieldErrors().stream()
+                .map(error -> new ApiProblemDetail.FieldError(
+                        error.getField(),
+                        error.getDefaultMessage(),
+                        error.getRejectedValue() == null ? null : error.getRejectedValue().toString()))
+                .toList();
     }
 
     private ResponseEntity<ApiProblemDetail> respond(

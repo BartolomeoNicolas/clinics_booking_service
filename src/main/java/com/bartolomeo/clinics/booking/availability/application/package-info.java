@@ -1,8 +1,9 @@
 package com.bartolomeo.clinics.booking.availability.application;
 
 /**
- * Capa de aplicación del contexto {@code user}: casos de uso, fachada y excepciones.
+ * Capa de aplicación del contexto {@code availability}: casos de uso, fachada y excepciones.
  *
- * <p>Donde vive el hash de contraseñas y la lógica de emisión de tokens, como reglas de
- * negocio y no como configuración de Spring.
+ * <p>Acá viven el orden en que se juntan las fuentes —catálogo, cátedra, fecha pedida— y el
+ * reloj con el que se juzga la vigencia de los reténes. La regla pura de cálculo no: esa está
+ * en {@code domain}, sin Spring y sin nada que opinar sobre de dónde vienen los datos.
  */

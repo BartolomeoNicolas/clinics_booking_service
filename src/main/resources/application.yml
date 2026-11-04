@@ -13,6 +13,10 @@ spring:
   profiles:
     default: dev
 
+  kafka:
+    # Broker de la catedra. Lo da la catedra en el documento de integracion.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
   config:
     import:
       # .env local del repo, leido como properties. "optional" porque el archivo
@@ -53,6 +57,55 @@ clinics:
     # catalog-unavailable (503) con la causa original adjunta.
     connect-timeout-ms: ${CLINICS_CATALOG_CONNECT_TIMEOUT_MS:2000}
     read-timeout-ms: ${CLINICS_CATALOG_READ_TIMEOUT_MS:5000}
+
+  catedra:
+    # URL del servicio central de la catedra. Mismos nombres de variable que en el
+    # servicio de sincronizacion, porque los dos hablan con la misma catedra y el
+    # operador no deberia tener que acordarse de dos nombres para un solo valor.
+    base-url: ${CATEDRA_BASE_URL:http://172.17.201.1:8090}
+    # Cuenta tecnica, la misma que usa el servicio de sincronizacion. Quedan vacias
+    # hasta registrarla, y NO son obligatorias al arrancar: la cuenta se da de alta
+    # una sola vez y un servicio sin credenciales tiene que poder levantar. Lo que si
+    # es obligatorio es la URL. Si faltan las credenciales, el error nombra la falta
+    # en el momento de usarlas.
+    technical-user: ${CATEDRA_TECHNICAL_USER:}
+    technical-password: ${CATEDRA_TECHNICAL_PASSWORD:}
+    # JWT tecnico guardado al registrar. Opcional: si esta y alcanza ahorra un login;
+    # si no esta o vencio, el emisor pide uno nuevo y el renovado queda solo en memoria.
+    technical-jwt: ${CATEDRA_TECHNICAL_JWT:}
+    # Un timeout por operacion, y no uno global. Leer ocupaciones es lo que espera el
+    # usuario con la pantalla abierta; confirmar un reten pone en marcha la creacion
+    # de la reserva y un timeout agresivo ahi deja un reten tomado del otro lado sin
+    # que nadie sepa si se confirmo.
+    connect-timeout-ms: ${CATEDRA_CONNECT_TIMEOUT_MS:2000}
+    occupancies-read-timeout-ms: ${CATEDRA_OCCUPANCIES_READ_TIMEOUT_MS:3000}
+    appointments-read-timeout-ms: ${CATEDRA_APPOINTMENTS_READ_TIMEOUT_MS:5000}
+    create-hold-timeout-ms: ${CATEDRA_CREATE_HOLD_TIMEOUT_MS:5000}
+    confirm-hold-timeout-ms: ${CATEDRA_CONFIRM_HOLD_TIMEOUT_MS:8000}
+    cancel-timeout-ms: ${CATEDRA_CANCEL_TIMEOUT_MS:5000}
+    # Reintentos extra SOLO para las dos lecturas. Un timeout no prueba que una
+    # operacion con efectos haya fallado (anexo 18.4), asi que las escrituras no
+    # se repiten nunca desde el cliente.
+    read-retries: ${CATEDRA_READ_RETRIES:2}
+
+    # Kafka de la catedra. Los topics los crea la catedra y llevan nuestro groupId.
+    kafka:
+      # El consumidor se puede apagar para levantar el servicio sin Kafka (por
+      # ejemplo, en un entorno donde todavia no hay broker de pruebas).
+      enabled: ${CATEDRA_KAFKA_ENABLED:true}
+      # El groupId de la cuenta tecnica: va en los topics y en el mensaje que
+      # este servicio publica.
+      group-id: ${CATEDRA_GROUP_ID:nicobartok0-prog2}
+      actions-topic: ${CATEDRA_ACTIONS_TOPIC:alumnos.turnos.acciones.nicobartok0-prog2}
+      phone-topic: ${CATEDRA_PHONE_TOPIC:catedra.turnos.telefono.nicobartok0-prog2}
+      # Un grupo por servicio: si dos servicios compartieran el grupo, se repartirian
+      # los mensajes y cada uno recibiria la mitad.
+      consumer-group: ${CATEDRA_CONSUMER_GROUP:clinics-booking}
+      # Reintentos con tope ante un error recuperable. Acotados a proposito: un error
+      # que se repite no se arregla insistiendo.
+      retries: ${CATEDRA_KAFKA_RETRIES:3}
+      retry-interval-ms: ${CATEDRA_KAFKA_RETRY_INTERVAL_MS:1000}
+      send-timeout-ms: ${CATEDRA_KAFKA_SEND_TIMEOUT_MS:5000}
 
 ---
 # Perfil de desarrollo local.
