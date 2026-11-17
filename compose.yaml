@@ -1,0 +1,50 @@
+# Infraestructura de datos de clinics_booking_service.
+#
+# Levanta SOLO PostgreSQL. El esquema lo crea Liquibase, nunca Hibernate.
+#
+#   docker compose up -d
+#   ./gradlew bootRun     # Liquibase aplica el changelog al arrancar
+#
+# Puerto publicado únicamente en loopback: la base no queda expuesta a la red.
+#
+# Red 10.91.0.0/16: disjunta de la del servicio de catalogo (10.90.0.0/16),
+# de docker0 (172.17.0.0/16) y de la red de la catedra (172.17.201.0/24).
+
+name: clinics-booking
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinics-booking-postgres
+    restart: unless-stopped
+    environment:
+      # El usuario inicial es el administrador, NO el de la aplicación.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?definí POSTGRES_ADMIN_PASSWORD en .env}
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+      BOOKING_APP_PASSWORD: ${DB_PASSWORD:?definí DB_PASSWORD en .env}
+    volumes:
+      - clinics-booking-pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - clinics-net
+    ports:
+      - "127.0.0.1:${DB_PORT:-55433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clinics_booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+networks:
+  clinics-net:
+    name: clinics-booking-net
+    ipam:
+      config:
+        - subnet: 10.91.0.0/16
+
+volumes:
+  clinics-booking-pgdata:
+    name: clinics-booking-pgdata

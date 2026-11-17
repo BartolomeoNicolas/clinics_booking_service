@@ -1,13 +1,29 @@
-# Configuración base de clinics_booking_service.
+# clinics_booking_service
 #
-# Los secretos NO van acá. A partir de BOOK-M0-02 se leen del entorno y de
-# ~/.config/clinics/secrets/ (enunciado §5, H9).
+# REGLA DE ESTE ARCHIVO: no contiene ningun secreto. Solo placeholders.
+# Los valores reales entran por spring.config.import, desde .env o desde
+# ~/.config/clinics/secrets/booking.yml. Ver .env.example.
+#
+# Criterio de arranque: si falta un secreto requerido, la app NO arranca y el
+# error nombra la variable que falta.
 
 spring:
   application:
     name: clinics-booking-service
   profiles:
     default: dev
+
+  config:
+    import:
+      # .env local del repo, leido como properties. "optional" porque el archivo
+      # puede no existir: lo que falla despues es el placeholder sin default.
+      - "optional:file:.env[.properties]"
+      # Ubicacion canonica, fuera del repo. CLINICS_SECRETS_DIR la sobreescribe.
+      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/booking.yml"
+      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/booking.yaml"
+      # Valores compartidos con el servicio de catalogo: la audiencia del token
+      # de sesion y donde esta la clave publica.
+      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/common.yml"
 
 server:
   port: 8082
@@ -32,21 +48,48 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:postgresql://localhost:5432/clinics_booking
-    username: postgres
-    password: postgres
+    # Sin default a proposito. La validacion de clinics.local.db-password es la que
+    # hace fallar el arranque nombrando la variable que falta.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:55433}/${DB_NAME:clinics_booking}
+    username: ${DB_USER:booking_app}
+    password: ${clinics.local.db-password}
+    hikari:
+      maximum-pool-size: 10
   jpa:
     hibernate:
       # El esquema es de Liquibase, nunca de Hibernate. Vease BOOK-M0-03.
       ddl-auto: none
     open-in-view: false
   liquibase:
-    # Sin changelogs todavia: los agrega BOOK-M0-03.
-    enabled: false
+    # Aplicado en el arranque. Ver db/changelog/db.changelog-master.xml.
+    # OJO: no poner `contexts` acá. En Liquibase eso FILTRA los changesets que
+    # no lleven esa etiqueta, en vez de activarlos: la app levanta sin error y
+    # no crea ninguna tabla.
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.xml
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# Secretos locales. La validacion (@NotBlank) hace que falte uno rompa el arranque.
+clinics:
+  local:
+    db-password: ${DB_PASSWORD:}
+
+  security:
+    jwt:
+      # La privada sale de este servicio y no se comparte. La publica la escribe
+      # este servicio y la lee el de catalogo.
+      private-key-path: ${CLINICS_JWT_PRIVATE_KEY_PATH:${user.home}/.config/clinics/secrets/jwt-private.pem}
+      public-key-path: ${CLINICS_JWT_PUBLIC_KEY_PATH:${user.home}/.config/clinics/secrets/jwt-public.pem}
+      # La misma audiencia que usa el servicio de catalogo: la app KMP consume
+      # las dos APIs con un solo token de sesion.
+      audience: ${CLINICS_JWT_AUDIENCE:clinics}
+      issuer: ${CLINICS_JWT_ISSUER:clinics-booking}
+      # Rotacion del par: ponerlo en true regenera la clave en el proximo arranque.
+      rotate: ${CLINICS_JWT_ROTATE:false}
+      key-size: ${CLINICS_JWT_KEY_SIZE:2048}
 
 logging:
   level:
@@ -59,16 +102,30 @@ spring:
     activate:
       on-profile: test
   datasource:
-    # Lo reemplaza el contenedor de Testcontainers que se levanta en los tests.
-    url: jdbc:postgresql://localhost:5432/clinics_booking_test
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:55433}/${DB_NAME:clinics_booking_test}
+    username: ${DB_USER:booking_app}
+    password: ${clinics.local.db-password}
   jpa:
     hibernate:
       ddl-auto: none
     open-in-view: false
   liquibase:
     enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+clinics:
+  local:
+    db-password: ${DB_PASSWORD:}
+  security:
+    jwt:
+      private-key-path: ${CLINICS_JWT_PRIVATE_KEY_PATH:${user.home}/.config/clinics/secrets/jwt-private.pem}
+      public-key-path: ${CLINICS_JWT_PUBLIC_KEY_PATH:${user.home}/.config/clinics/secrets/jwt-public.pem}
+      audience: clinics
+      issuer: clinics-booking
+      rotate: false
 
 logging:
   level:
