@@ -4,8 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.anyString;import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -74,6 +73,7 @@ class ReconcileReservationsUseCaseImplTest {
     @BeforeEach
     void preparar() {
         when(catedra.listAppointments(any())).thenReturn(List.of());
+        when(repository.findInvalid()).thenReturn(List.of());
     }
 
     private void dejaAbiertos(ReservationProcess... procesos) {
@@ -206,6 +206,40 @@ class ReconcileReservationsUseCaseImplTest {
 
         assertThat(convergidos).isZero();
         verifyNoInteractions(catedra);
+        verify(repository, never()).save(any(ReservationProcess.class));
+    }
+
+    @Test
+    @DisplayName("un proceso invalido se le pregunta a la catedra cual es el estado real")
+    void unProcesoInvalidoSeLePreguntaALaCatedra() {
+        when(repository.findOpen()).thenReturn(List.of());
+        when(repository.findInvalid())
+                .thenReturn(List.of(proceso(ReservationState.INVALID, AHORA.plusSeconds(600))));
+        when(catedra.listAppointments(any()))
+                .thenReturn(List.of(reserva(CatedraReservationStatus.CONFIRMED)));
+
+        int convergidos = useCase.reconcilePending();
+
+        assertThat(convergidos).isEqualTo(1);
+        // La respuesta de la catedra corrige lo que teniamos anotado.
+        ArgumentCaptor<ReservationProcess> captor =
+                ArgumentCaptor.forClass(ReservationProcess.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().state()).isEqualTo(ReservationState.CONFIRMED);
+        verify(registrar).registraConfirmacion(any(ReservationProcess.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("un proceso invalido sin nada en la catedra se queda invalido")
+    void unProcesoInvalidoSinNadaSeQuedaInvalido() {
+        when(repository.findOpen()).thenReturn(List.of());
+        when(repository.findInvalid())
+                .thenReturn(List.of(proceso(ReservationState.INVALID, AHORA.plusSeconds(600))));
+        when(catedra.listAppointments(any())).thenReturn(List.of());
+
+        int convergidos = useCase.reconcilePending();
+
+        assertThat(convergidos).isZero();
         verify(repository, never()).save(any(ReservationProcess.class));
     }
 }

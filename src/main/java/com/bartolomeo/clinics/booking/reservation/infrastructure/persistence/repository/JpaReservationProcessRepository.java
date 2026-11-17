@@ -42,6 +42,14 @@ public interface JpaReservationProcessRepository
     List<ReservationProcessEntity> findByStatusNotIn(List<ReservationState> estadosCerrados);
 
     /**
+     * Los procesos que la catedra marco como invalidos.
+     *
+     * @param estado el estado invalido
+     * @return los procesos invalidos
+     */
+    List<ReservationProcessEntity> findByStatus(ReservationState estado);
+
+    /**
      * Los procesos de un usuario, de los más nuevos a los más viejos.
      *
      * @param userId   usuario dueño de los procesos

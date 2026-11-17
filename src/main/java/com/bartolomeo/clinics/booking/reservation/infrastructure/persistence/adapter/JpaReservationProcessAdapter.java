@@ -67,6 +67,13 @@ public class JpaReservationProcessAdapter implements ReservationProcessRepositor
     }
 
     @Override
+    public List<ReservationProcess> findInvalid() {
+        return jpaReservationProcessRepository.findByStatus(ReservationState.INVALID).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<ReservationProcess> findByUserId(long userId, int page, int size) {
         return jpaReservationProcessRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))

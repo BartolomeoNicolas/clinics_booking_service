@@ -62,6 +62,18 @@ public interface ReservationProcessRepository {
     java.util.List<ReservationProcess> findOpen();
 
     /**
+     * Los procesos que la cátedra marcó como inválidos.
+     *
+     * <p><strong>No están en {@link #findOpen()} y también hay que mirarlos.</strong> Un
+     * proceso inválido está cerrado —ningún evento lo mueve— pero su estado real sigue sin
+     * confirmarse: la cátedra dijo que hay una inconsistencia y todavía no se le preguntó cuál
+     * es el estado persistido (anexo §15.9).
+     *
+     * @return los procesos inválidos
+     */
+    java.util.List<ReservationProcess> findInvalid();
+
+    /**
      * Los procesos de un usuario, en una página.
      *
      * <p><strong>El usuario es parte de la consulta, no un filtro opcional.</strong> Es lo que

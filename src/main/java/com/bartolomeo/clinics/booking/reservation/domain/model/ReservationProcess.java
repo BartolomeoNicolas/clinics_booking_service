@@ -191,6 +191,27 @@ public record ReservationProcess(
                         now));
     }
 
+    /**
+     * Corrige el estado de un proceso que la cátedra marcó como inválido.
+     *
+     * <p><strong>Solo la reconciliación lo usa.</strong> Un proceso inválido es un proceso del
+     * que la cátedra dijo "esto es inconsistente" (§15.9), y lo que el usuario necesita saber
+     * es cuál es el estado real: para eso se le pregunta por REST, y lo que ella responda
+     * corrige lo que nosotros teníamos anotado.
+     *
+     * <p><strong>No es una transición como las demás.</strong> La tabla de transiciones
+     * governs lo que le hace un <em>evento</em> a un proceso, y un evento nunca reabre un
+     * proceso cerrado. Acá no hay ningún evento: hay una consulta explícita a la fuente que
+     * manda, y su respuesta corrige una conclusión que había quedado vieja.
+     *
+     * @param estado el estado que dice la cátedra
+     * @param now    instante del cambio
+     * @return el proceso con el estado corregido
+     */
+    public ReservationProcess corregidoPorLaCatedra(ReservationState estado, Instant now) {
+        return copy(estado, holdId, catedraProcessId, requestEventId, expiresAt, failureReason, now);
+    }
+
     /** Copia del proceso con el estado y los datos que cambian. */
     private ReservationProcess copy(
             ReservationState state,
