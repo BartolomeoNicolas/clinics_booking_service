@@ -101,6 +101,34 @@ El barrido corre al arrancar y después cada `clinics.reservation.sweep-interval
 (60 s por defecto). Si la cátedra no responde, el barrido se anota y el servicio sigue
 atendiendo: un proceso sin reconciliar se reconcilia en el próximo barrido.
 
+## Documentación
+
+| Qué | Dónde |
+|---|---|
+| **ADRs**: las decisiones que explican por qué el servicio está como está | [docs/adr](docs/adr/README.md) |
+| **Errores de la cátedra**: la matriz de traducción, código por código | [abajo](#errores-de-la-cátedra) |
+| **Reconciliación y recuperación**: qué pasa con los procesos a medias | [abajo](#reconciliación-y-recuperación) |
+| **Contratos entre los dos servicios** | [catálogo](#arquitectura) y el README del servicio de catálogo |
+
+## Evidencias
+
+`./scripts/evidencias.sh` corre la suite completa y deja el informe en
+`build/evidencias/`: la salida del build y el resultado test por test.
+
+| Evidencia del §11 | Dónde se prueba |
+|---|---|
+| 6 · reserva confirmada mediante el flujo REST y Kafka | `ReservationFlowIntegrationTest` |
+| 7 · reserva que expira sin completar la información | `ReservationFlowIntegrationTest` |
+| 8 · consulta y cancelación propias, sin acceso cruzado | `ReservationIsolationIntegrationTest` |
+| 9 · procesamiento idempotente de un mensaje duplicado | `ReservationFlowIntegrationTest` |
+| 10 · rechazo de accesos no autenticados | `ReservationIsolationIntegrationTest` |
+| 12 · separación efectiva de datos entre los dos servicios | la estructura de contextos y `CatalogContextStructureTest` |
+| 14 · un reinicio con operaciones pendientes converge | `ReconciliationAfterRestartIntegrationTest` |
+
+La suite corre **sin la red de la cátedra**: lo que no se puede probar sin la VPN —el ACL
+real de lectura sobre `catedra:sync:*`— queda como evidencia local con Redis y un ACL
+equivalente, y está escrito como tal en el README del servicio de catálogo.
+
 ## Requisitos
 
 - JDK 25. En esta máquina: `~/Facultad/android-studio/jbr` (el Java del sistema es 21).
