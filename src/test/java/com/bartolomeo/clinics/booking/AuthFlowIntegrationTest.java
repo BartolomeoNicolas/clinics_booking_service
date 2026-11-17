@@ -75,6 +75,9 @@ class AuthFlowIntegrationTest {
                 () -> KEY_DIR.resolve("jwt-public.pem").toString());
         registry.add("clinics.security.jwt.audience", () -> "clinics");
         registry.add("clinics.security.jwt.issuer", () -> "clinics-booking");
+        // El consumidor de Kafka se apaga: estos tests no necesitan broker y sin él el
+        // contenedor solo produce ruido de conexion.
+        registry.add("clinics.catedra.kafka.enabled", () -> "false");
         registry.add("spring.liquibase.enabled", () -> "true");
     }
 

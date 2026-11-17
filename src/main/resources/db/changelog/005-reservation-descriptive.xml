@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- ================================================================
+         La reserva confirmada, con los datos que la catedra dio.
+
+         Los nombres del profesional y del paciente son HISTORICOS: son
+         lo que decia la catedra en el momento de confirmar. No son el
+         catalogo vigente, y por eso no se usan para mostrar
+         disponibilidad ni para decidir si un turno existe. El catalogo
+         lo tiene el servicio de catalogo (enunciado 4.2).
+
+         El identificador de la catedra se guarda aparte del local, que
+         es el que se usa para armar el mensaje de cancelacion.
+         ================================================================ -->
+
+    <changeSet id="007-01-reservation-descriptive" author="nicobartok0">
+        <addColumn tableName="reservation">
+            <column name="catedra_reservation_id" type="BIGINT"/>
+            <column name="professional_first_name" type="VARCHAR(100)"/>
+            <column name="professional_last_name" type="VARCHAR(100)"/>
+            <column name="patient_first_name" type="VARCHAR(100)"/>
+            <column name="patient_last_name" type="VARCHAR(100)"/>
+        </addColumn>
+
+        <createIndex indexName="idx_reservation_catedra" tableName="reservation">
+            <column name="catedra_reservation_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

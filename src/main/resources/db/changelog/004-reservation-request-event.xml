@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- ================================================================
+         El evento que hay que responder.
+
+         Cuando la catedra pide el telefono, manda un evento con su
+         propio identificador, y la respuesta con el telefono tiene que
+         llevar ese identificador adentro (anexo §15.5). Guardarlo en el
+         proceso es lo que permite responder una sola vez y con la
+         referencia correcta.
+
+         La columna es nullable: un proceso todavia no tiene evento que
+         responder hasta que la catedra lo pide.
+         ================================================================ -->
+
+    <changeSet id="006-01-reservation-request-event" author="nicobartok0">
+        <addColumn tableName="reservation_process">
+            <column name="request_event_id" type="VARCHAR(128)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

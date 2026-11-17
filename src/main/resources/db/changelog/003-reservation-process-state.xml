@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <!-- ================================================================
+         El proceso de reserva, con los datos que hacen falta para poder
+         reconciliar y para no duplicar.
+
+         El vocabulario de estados cambia: el que estaba puesto era el
+         diagrama del anexo §17 leído de una pasada, y el completo
+         distingue los momentos del flujo que de verdad son distintos
+         (solicitado, reten creado, esperando el telefono, telefono
+         mandado) y agrega el lado nuestro (FAILED).
+
+         Los CHECK van con SQL y no con `addCheckConstraint` porque ese
+         elemento no existe en la edicion community de Liquibase: es
+         funcion Pro, y el XSD de la 5.0 lo rechaza y la app no levanta.
+         ================================================================ -->
+
+    <changeSet id="005-01-reservation-process-state" author="nicobartok0">
+        <sql>
+            ALTER TABLE reservation_process DROP CONSTRAINT ck_reservation_process_status;
+            ALTER TABLE reservation_process ADD CONSTRAINT ck_reservation_process_status CHECK (
+                status IN ('INITIATED', 'HOLD_CREATED', 'WAITING_FOR_PHONE', 'PHONE_SUBMITTED',
+                           'REJECTED', 'CONFIRMED', 'CANCELLED', 'EXPIRED', 'INVALID', 'FAILED')
+            );
+            ALTER TABLE reservation_process ALTER COLUMN status SET DEFAULT 'INITIATED';
+        </sql>
+
+        <addColumn tableName="reservation_process">
+            <!-- El identificador del paciente en la forma de la catedra. -->
+            <column name="external_patient_id" type="VARCHAR(100)"/>
+            <!-- El proceso de la catedra, que no es el id local de la fila. -->
+            <column name="catedra_process_id" type="VARCHAR(64)"/>
+            <!-- La clave de idempotencia de la solicitud. -->
+            <column name="request_key" type="VARCHAR(128)"/>
+            <!-- Por que quedo asi, para poder explicarlo despues. -->
+            <column name="failure_reason" type="VARCHAR(500)"/>
+        </addColumn>
+
+        <!--
+          El indice unico es la garantia real de que un reintento no cree
+          dos procesos: el codigo lo pide, pero lo que lo hace cumplir es
+          esto. Cuando la base avisa que se chocó, la excepcion se
+          traduce al idioma del dominio.
+        -->
+        <addUniqueConstraint tableName="reservation_process"
+                             columnNames="user_id, request_key"
+                             constraintName="uq_reservation_process_request"/>
+
+        <createIndex indexName="idx_reservation_process_catedra" tableName="reservation_process">
+            <column name="catedra_process_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
