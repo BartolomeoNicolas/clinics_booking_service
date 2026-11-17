@@ -62,6 +62,27 @@ public interface ReservationProcessRepository {
     java.util.List<ReservationProcess> findOpen();
 
     /**
+     * Los procesos de un usuario, en una página.
+     *
+     * <p><strong>El usuario es parte de la consulta, no un filtro opcional.</strong> Es lo que
+     * garantiza el aislamiento: no hay forma de pedir los procesos de otro.
+     *
+     * @param userId usuario dueño de los procesos
+     * @param page   número de página, empezando en cero
+     * @param size   tamaño de la página
+     * @return los procesos de ese usuario
+     */
+    java.util.List<ReservationProcess> findByUserId(long userId, int page, int size);
+
+    /**
+     * Cuántos procesos tiene un usuario.
+     *
+     * @param userId usuario dueño de los procesos
+     * @return el total
+     */
+    long countByUserId(long userId);
+
+    /**
      * Guarda el proceso.
      *
      * @param process proceso a guardar

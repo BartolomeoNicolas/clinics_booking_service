@@ -9,6 +9,8 @@ import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationPr
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.entity.ReservationProcessEntity;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.mapper.ReservationProcessMapper;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.repository.JpaReservationProcessRepository;
+import org.springframework.data.domain.PageRequest;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +64,20 @@ public class JpaReservationProcessAdapter implements ReservationProcessRepositor
         return jpaReservationProcessRepository.findByStatusNotIn(cerrados).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<ReservationProcess> findByUserId(long userId, int page, int size) {
+        return jpaReservationProcessRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByUserId(long userId) {
+        return jpaReservationProcessRepository.countByUserId(userId);
     }
 
     @Override
