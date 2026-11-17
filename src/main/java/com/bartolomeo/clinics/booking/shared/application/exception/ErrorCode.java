@@ -1,7 +1,7 @@
 package com.bartolomeo.clinics.booking.shared.application.exception;
 
 /**
- * Identidad estable de cada tipo de error del contexto de usuarios.
+ * Identidad estable de cada tipo de error del servicio.
  *
  * <p>El codigo identifica <em>que paso</em>, y eso lo define el negocio. El status HTTP con el
  * que se responde es una decision de infraestructura, y no puede vivificar el dominio hacia
@@ -23,6 +23,8 @@ public enum ErrorCode {
     INVALID_CREDENTIALS("invalid-credentials", "Credenciales incorrectas"),
     USER_NOT_FOUND("user-not-found", "Usuario no encontrado"),
     NOT_FOUND("not-found", "No encontrado"),
+    CATALOG_UNAVAILABLE("catalog-unavailable", "Catálogo no disponible"),
+    CATALOG_REJECTED("catalog-rejected", "Catálogo rechazó la credencial"),
     INTERNAL_ERROR("internal-error", "Error interno");
 
     private final String code;
