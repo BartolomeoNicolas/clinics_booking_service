@@ -2,6 +2,7 @@ package com.bartolomeo.clinics.booking.catedra.infrastructure.rest;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -160,7 +161,7 @@ class CatedraAppointmentsContractTest {
         catedra.stubFor(get(urlEqualTo(
                         "/api/appointment-occupancies?professionalId=15"
                                 + "&from=2026-09-14&to=2026-09-14"))
-                .willReturn(ok(OCUPACIONES)));
+                .willReturn(okJson(OCUPACIONES)));
 
         List<Occupancy> ocupaciones = adapter.getOccupancies(15, DIA, DIA);
 
@@ -177,7 +178,7 @@ class CatedraAppointmentsContractTest {
     @Test
     @DisplayName("crea el reten con la hora en HH:mm, como muestra el contrato")
     void creaElReten() {
-        catedra.stubFor(post(urlEqualTo("/api/appointment-holds")).willReturn(ok(RETEN)));
+        catedra.stubFor(post(urlEqualTo("/api/appointment-holds")).willReturn(okJson(RETEN)));
 
         AppointmentHold reten = adapter.createHold(15, DIA, HORA, "user-42");
 
@@ -199,7 +200,7 @@ class CatedraAppointmentsContractTest {
     @DisplayName("confirma el reten por su id y devuelve el proceso esperando el telefono")
     void confirmaElReten() {
         catedra.stubFor(post(urlEqualTo("/api/appointment-holds/hold-6c0c2f41/confirm"))
-                .willReturn(ok(CONFIRMACION)));
+                .willReturn(okJson(CONFIRMACION)));
 
         AppointmentConfirmation confirmacion =
                 adapter.confirmHold("hold-6c0c2f41", "user-42", "Juan", "Perez");
@@ -220,7 +221,7 @@ class CatedraAppointmentsContractTest {
         catedra.stubFor(get(urlEqualTo(
                         "/api/appointments?externalPatientId=user-42&status=CONFIRMED"
                                 + "&page=0&size=20"))
-                .willReturn(ok(LISTADO)));
+                .willReturn(okJson(LISTADO)));
 
         AppointmentsQuery query = new AppointmentsQuery(
                 "user-42", CatedraReservationStatus.CONFIRMED, null, null, 0, 20);
@@ -241,7 +242,7 @@ class CatedraAppointmentsContractTest {
     @DisplayName("lista sin filtros y no manda parámetros vacíos que filtrarían por vacío")
     void listaSinFiltros() {
         catedra.stubFor(get(urlEqualTo("/api/appointments?page=0&size=20"))
-                .willReturn(ok("[]")));
+                .willReturn(okJson("[]")));
 
         List<CatedraAppointment> reservas = adapter.listAppointments(AppointmentsQuery.all());
 
@@ -254,7 +255,7 @@ class CatedraAppointmentsContractTest {
     @DisplayName("cancela mandando el motivo, y el cuerpo admite motivo nulo")
     void cancela() {
         catedra.stubFor(post(urlEqualTo("/api/appointments/process-a92b47d0/cancel"))
-                .willReturn(ok(CANCELACION)));
+                .willReturn(okJson(CANCELACION)));
 
         AppointmentCancellation cancelacion =
                 adapter.cancelAppointment("process-a92b47d0", "Cambio solicitado por el usuario");
@@ -270,7 +271,7 @@ class CatedraAppointmentsContractTest {
     @DisplayName("cancela sin motivo sin mandar un objeto mal formado")
     void cancelaSinMotivo() {
         catedra.stubFor(post(urlEqualTo("/api/appointments/process-a92b47d0/cancel"))
-                .willReturn(ok(CANCELACION)));
+                .willReturn(okJson(CANCELACION)));
 
         adapter.cancelAppointment("process-a92b47d0", null);
 
@@ -286,7 +287,7 @@ class CatedraAppointmentsContractTest {
         catedra.stubFor(get(urlEqualTo(
                         "/api/appointment-occupancies?professionalId=15"
                                 + "&from=2026-09-14&to=2026-09-14"))
-                .willReturn(ok(OCUPACIONES)));
+                .willReturn(okJson(OCUPACIONES)));
 
         adapter.getOccupancies(15, DIA, DIA);
         adapter.getOccupancies(15, DIA, DIA);
@@ -302,7 +303,7 @@ class CatedraAppointmentsContractTest {
         catedra.stubFor(get(urlEqualTo(
                         "/api/appointment-occupancies?professionalId=15"
                                 + "&from=2026-09-14&to=2026-09-14"))
-                .willReturn(ok(OCUPACIONES)));
+                .willReturn(okJson(OCUPACIONES)));
 
         adapter.getOccupancies(15, DIA, DIA);
 
@@ -348,7 +349,7 @@ class CatedraAppointmentsContractTest {
                                 + "&from=2026-09-14&to=2026-09-14"))
                 .inScenario("renovacion")
                 .whenScenarioStateIs("logueado-dos")
-                .willReturn(ok(OCUPACIONES)));
+                .willReturn(okJson(OCUPACIONES)));
 
         List<Occupancy> ocupaciones = adapter.getOccupancies(15, DIA, DIA);
 
@@ -396,7 +397,7 @@ class CatedraAppointmentsContractTest {
                                 + "&from=2026-09-14&to=2026-09-14"))
                 .inScenario("intermitente")
                 .whenScenarioStateIs("cortado")
-                .willReturn(ok(OCUPACIONES)));
+                .willReturn(okJson(OCUPACIONES)));
 
         List<Occupancy> ocupaciones = adapter.getOccupancies(15, DIA, DIA);
 
@@ -498,8 +499,10 @@ class CatedraAppointmentsContractTest {
     }
 
     private void stubearLogin(String token) {
+        // Con Content-Type de JSON: la catedra responde JSON y el cliente tiene que
+        // entenderlo por el tipo, no por adivinar.
         catedra.stubFor(post(urlEqualTo("/api/authenticate"))
-                .willReturn(ok("{\"id_token\":\"" + token + "\"}")));
+                .willReturn(okJson("{\"id_token\":\"" + token + "\"}")));
     }
 
     private List<ServeEvent> eventos(String metodo, String path) {

@@ -1,21 +1,15 @@
 package com.bartolomeo.clinics.booking.reservation.application.usecases;
 
 import com.bartolomeo.clinics.booking.reservation.application.exception.UnknownReservationProcessException;
+import com.bartolomeo.clinics.booking.reservation.application.service.ReservationRegistrar;
 import com.bartolomeo.clinics.booking.reservation.application.service.ReservationTransitions;
-import com.bartolomeo.clinics.booking.reservation.domain.model.Reservation;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEvent;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEventEnvelope;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.ProcessReservationEventUseCase;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ProcessedEventRepository;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationProcessRepository;
-import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationRepository;
 import java.time.Clock;
-import java.time.Instant;
-import java.util.Optional;
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,19 +38,26 @@ import org.springframework.transaction.annotation.Transactional;
  * historia y no el catálogo vigente.
  */
 @Component
-@RequiredArgsConstructor
 public class ProcessReservationEventUseCaseImpl implements ProcessReservationEventUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(ProcessReservationEventUseCaseImpl.class);
-
-    private static final String ESTADO_CONFIRMADA = "CONFIRMED";
-    private static final String ESTADO_CANCELADA = "CANCELLED";
-
     private final ReservationProcessRepository repository;
-    private final ReservationRepository reservations;
+    private final ReservationRegistrar registrar;
     private final ProcessedEventRepository processedEvents;
     private final ReservationTransitions transitions;
     private final Clock clock;
+
+    public ProcessReservationEventUseCaseImpl(
+            ReservationProcessRepository repository,
+            ReservationRegistrar registrar,
+            ProcessedEventRepository processedEvents,
+            ReservationTransitions transitions,
+            Clock clock) {
+        this.repository = repository;
+        this.registrar = registrar;
+        this.processedEvents = processedEvents;
+        this.transitions = transitions;
+        this.clock = clock;
+    }
 
     @Override
     @Transactional
@@ -95,53 +96,9 @@ public class ProcessReservationEventUseCaseImpl implements ProcessReservationEve
             ReservationProcess proceso, ReservationEventEnvelope envelope) {
 
         if (envelope.event() == ReservationEvent.CONFIRMED) {
-            guardaLaReserva(proceso, envelope);
+            registrar.registraConfirmacion(proceso, envelope.catedraReservationId());
         } else if (envelope.event() == ReservationEvent.CANCELLED) {
-            cancelaLaReserva(proceso);
+            registrar.registraCancelacion(proceso);
         }
-    }
-
-    /**
-     * Crea la reserva confirmada.
-     *
-     * <p>Si ya había una reserva para ese proceso, no se crea otra: el proceso es único y
-     * la reserva también.
-     */
-    private void guardaLaReserva(
-            ReservationProcess proceso, ReservationEventEnvelope envelope) {
-
-        if (reservations.findByProcessId(proceso.id()).isPresent()) {
-            return;
-        }
-
-        Instant ahora = clock.instant();
-        Reservation reserva = new Reservation(
-                null,
-                envelope.catedraReservationId() == null ? 0L : envelope.catedraReservationId(),
-                proceso.id(),
-                proceso.userId(),
-                proceso.professionalId(),
-                proceso.date(),
-                proceso.startTime(),
-                null,
-                ESTADO_CONFIRMADA,
-                null,
-                null,
-                null,
-                null,
-                ahora);
-
-        reservations.save(reserva);
-        log.info("Reserva confirmada para el proceso {} (reserva {} en la catedra)",
-                proceso.id(), reserva.catedraReservationId());
-    }
-
-    /** Cancela la reserva que había, si la había. */
-    private void cancelaLaReserva(ReservationProcess proceso) {
-        Optional<Reservation> existente = reservations.findByProcessId(proceso.id());
-        if (existente.isEmpty()) {
-            return;
-        }
-        reservations.save(existente.get().conEstado(ESTADO_CANCELADA));
     }
 }

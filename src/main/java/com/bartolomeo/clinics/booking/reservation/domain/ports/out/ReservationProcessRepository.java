@@ -47,6 +47,21 @@ public interface ReservationProcessRepository {
     Optional<ReservationProcess> findByCatedraProcessId(String catedraProcessId);
 
     /**
+     * Los procesos que todavía no llegaron a un estado cerrado.
+     *
+     * <p><strong>"Abiertos" no es lo mismo que "pendientes de hacer".</strong> Un proceso
+     * confirmado sigue abierto —se puede cancelar— y uno que espera el teléfono también. Lo
+     * que no está abierto es un proceso que ya no admite ningún movimiento: cancelado,
+     * vencido, inválido o fallido.
+     *
+     * <p>Es lo que recorre la reconciliación: los procesos cerrados no se tocan y los
+     * abiertos se comparan contra el estado real de la cátedra.
+     *
+     * @return los procesos abiertos
+     */
+    java.util.List<ReservationProcess> findOpen();
+
+    /**
      * Guarda el proceso.
      *
      * @param process proceso a guardar

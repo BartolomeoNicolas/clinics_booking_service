@@ -2,11 +2,15 @@ package com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.ad
 
 import com.bartolomeo.clinics.booking.reservation.application.exception.DuplicateReservationRequestException;
 import com.bartolomeo.clinics.booking.reservation.application.exception.ReservationPersistenceException;
+import com.bartolomeo.clinics.booking.reservation.domain.ReservationStateMachine;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationProcessRepository;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.entity.ReservationProcessEntity;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.mapper.ReservationProcessMapper;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.repository.JpaReservationProcessRepository;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -47,6 +51,17 @@ public class JpaReservationProcessAdapter implements ReservationProcessRepositor
     public Optional<ReservationProcess> findByCatedraProcessId(String catedraProcessId) {
         return jpaReservationProcessRepository.findByCatedraProcessId(catedraProcessId)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<ReservationProcess> findOpen() {
+        List<ReservationState> cerrados = Arrays.stream(ReservationState.values())
+                .filter(ReservationStateMachine::isClosed)
+                .toList();
+
+        return jpaReservationProcessRepository.findByStatusNotIn(cerrados).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override

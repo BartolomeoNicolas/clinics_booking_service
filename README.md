@@ -79,6 +79,28 @@ Dos decisiones que la tabla no muestra y conviene tener escritas:
 | `USERNAME_ALREADY_EXISTS`, `EMAIL_ALREADY_EXISTS`, `STUDENT_GROUP_ALREADY_EXISTS`, `INVALID_GROUP_ID`, `INVALID_PASSWORD` | 400 | Pertenecen a `POST /api/student/register`. Booking no registra cuentas técnicas: no hay caso de uso que pueda recibirlos. |
 | `STUDENT_INTEGRATION_NOT_FOUND` | 404 | Es la fila de `GET /api/student/integration`, que booking no llama. La misma fila con 403 —que sí le alcanza en listado, holds y cancelación— sí está traducida. |
 
+## Reconciliación y recuperación
+
+Un timeout no prueba que una operación haya fallado, y un reinicio no puede dejar procesos a
+medio hacer. Este servicio resuelve las dos cosas:
+
+- **Al repetir una acción con efectos, primero se consulta el estado** por los identificadores
+  ya guardados: las ocupaciones para saber si el retén llegó a crearse, y el listado de
+  reservas para saber si la confirmación llegó a aplicarse. Nunca se repite a ciegas.
+- **Al arrancar, y cada tanto**, un barrido compara los procesos que no cerraron con el estado
+  real de la cátedra (`GET /api/appointments`, filtrado por `externalPatientId`) y los deja
+  donde realmente están: confirmados, cancelados, fallidos o vencidos. Es lo que hace que,
+  tras un reinicio con operaciones pendientes, el servicio converja con la verdad.
+
+Lo que **no** se toca es lo que todavía puede pasar: un proceso que solo llegó a tomar el
+retén puede seguir esperando, porque la cátedra no lista los retenes y su ausencia en el
+listado no prueba nada. Solo se cierra el proceso que esperaba una reserva, porque esa tenía
+que existir.
+
+El barrido corre al arrancar y después cada `clinics.reservation.sweep-interval-ms`
+(60 s por defecto). Si la cátedra no responde, el barrido se anota y el servicio sigue
+atendiendo: un proceso sin reconciliar se reconcilia en el próximo barrido.
+
 ## Requisitos
 
 - JDK 25. En esta máquina: `~/Facultad/android-studio/jbr` (el Java del sistema es 21).

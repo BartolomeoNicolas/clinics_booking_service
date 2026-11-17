@@ -46,6 +46,11 @@ springdoc:
     path: /swagger-ui.html
 
 clinics:
+  reservation:
+    # Cada cuanto se reconcilian los procesos pendientes con el estado real de
+    # la catedra. Al arrancar se corre una vez igual: esto es el periodico.
+    sweep-interval-ms: ${CLINICS_RESERVATION_SWEEP_INTERVAL_MS:60000}
+
   catalog:
     # URL del servicio de catalogo. En los tests de contrato se pisa desde afuera
     # para apuntar a WireMock. Es el unico valor de este bloque que no cambia por

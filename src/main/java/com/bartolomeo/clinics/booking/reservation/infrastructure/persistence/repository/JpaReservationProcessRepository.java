@@ -1,6 +1,8 @@
 package com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.repository;
 
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.entity.ReservationProcessEntity;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -29,4 +31,12 @@ public interface JpaReservationProcessRepository
      * @return el proceso, si existe
      */
     Optional<ReservationProcessEntity> findByCatedraProcessId(String catedraProcessId);
+
+    /**
+     * Los procesos que no están en un estado cerrado.
+     *
+     * @param estadosCerrados los estados sin salida
+     * @return los procesos abiertos
+     */
+    List<ReservationProcessEntity> findByStatusNotIn(List<ReservationState> estadosCerrados);
 }
