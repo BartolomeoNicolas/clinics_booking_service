@@ -146,7 +146,7 @@ class CatedraAppointmentsContractTest {
         properties.setTechnicalUser("juan.perez");
         properties.setTechnicalPassword("una-clave-segura");
 
-        CatedraTokenSource tokens = new CatedraTokenSource(properties);
+        CatedraTokenSource tokens = new CatedraTokenSource(properties, new ObjectMapper());
         CatedraProblemTranslator translator = new CatedraProblemTranslator(new ObjectMapper());
         adapter = new CatedraAppointmentsAdapter(properties, tokens, translator);
 

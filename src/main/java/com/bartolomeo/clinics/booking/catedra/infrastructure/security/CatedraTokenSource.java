@@ -6,6 +6,9 @@ import com.bartolomeo.clinics.booking.catedra.application.exception.CatedraUnava
 import com.bartolomeo.clinics.booking.catedra.infrastructure.config.CatedraProperties;
 import com.bartolomeo.clinics.booking.catedra.infrastructure.rest.dto.CatedraLoginRequest;
 import com.bartolomeo.clinics.booking.catedra.infrastructure.rest.dto.CatedraLoginResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +19,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Consigue y conserva el JWT técnico con el que se le habla a la cátedra.
@@ -48,6 +53,7 @@ public class CatedraTokenSource {
     private static final Logger log = LoggerFactory.getLogger(CatedraTokenSource.class);
 
     private final CatedraProperties properties;
+    private final ObjectMapper objectMapper;
 
     /**
      * Cliente propio para el login.
@@ -60,6 +66,48 @@ public class CatedraTokenSource {
 
     /** Token vigente. Puede ser nulo antes del primer uso. */
     private volatile String token;
+
+    /**
+     * El token de la configuración, si hay uno y todavía sirve.
+     *
+     * <p><strong>Sin {@code exp} no sirve.</strong> No por desconfianza sino por prudencia: no
+     * se puede saber cuándo vence, así que no se arriesga mandarlo a la cátedra. El registro de
+     * la cuenta entrega un token de un año (anexo §5.1), y ese es el que se usa.
+     *
+     * @return el token configurado, o {@code null} si no hay o no se puede usar
+     */
+    private String configuredToken() {
+        String configurado = properties.getTechnicalJwt();
+        if (configurado == null || configurado.isBlank() || !isUsable(configurado)) {
+            return null;
+        }
+        return configurado;
+    }
+
+    /** Si el token sigue dentro de su vigencia. */
+    private boolean isUsable(String candidato) {
+        Instant expiry = expiresAt(candidato);
+        return expiry != null && expiry.isAfter(Instant.now());
+    }
+
+    /** La vigencia del token, si se puede leer. */
+    private Instant expiresAt(String candidato) {
+        String[] partes = candidato.split("\\.");
+        if (partes.length != 3) {
+            return null;
+        }
+        try {
+            String payload = new String(
+                    Base64.getUrlDecoder().decode(partes[1]), StandardCharsets.UTF_8);
+            JsonNode nodo = objectMapper.readTree(payload);
+            JsonNode exp = nodo.get("exp");
+            return exp == null ? null : Instant.ofEpochSecond(exp.asLong());
+        } catch (RuntimeException e) {
+            // base64 inválido, JSON inválido: no se puede saber la vigencia, y eso no es un
+            // error del usuario, así que se trata como "token no utilizable".
+            return null;
+        }
+    }
 
     /**
      * El cliente del login, armado una sola vez.
@@ -117,11 +165,21 @@ public class CatedraTokenSource {
         if (existente != null) {
             return existente;
         }
+
+        // El token que trajo el registro de la cuenta técnica sirve y no hace falta pedir
+        // otro: el registro entrega uno de un año (anexo §5.1).
+        String configurado = configuredToken();
+        if (configurado != null) {
+            log.debug("JWT técnico de la cátedra tomado de la configuración");
+            token = configurado;
+            return token;
+        }
+
         if (!properties.isProvisioned()) {
             throw new CatedraIntegrationMissingException(
                     "Faltan las credenciales de la cuenta técnica de la cátedra: definí"
-                            + " CLINICS_CATEDRA_TECHNICAL_USER y"
-                            + " CLINICS_CATEDRA_TECHNICAL_PASSWORD.");
+                            + " CATEDRA_TECHNICAL_USER y CATEDRA_TECHNICAL_PASSWORD,"
+                            + " o CATEDRA_TECHNICAL_JWT con el token del registro.");
         }
 
         try {
