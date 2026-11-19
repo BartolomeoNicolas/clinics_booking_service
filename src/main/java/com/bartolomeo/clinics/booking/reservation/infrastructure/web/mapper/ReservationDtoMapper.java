@@ -1,8 +1,10 @@
 package com.bartolomeo.clinics.booking.reservation.infrastructure.web.mapper;
 
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
+import com.bartolomeo.clinics.booking.reservation.domain.model.PageResult;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.CreateReservationRequest;
+import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.ReservationPageResponse;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.ReservationProcessResponse;
 import org.springframework.stereotype.Component;
 
@@ -50,5 +52,18 @@ public class ReservationDtoMapper {
                 process.startTime(),
                 process.catedraProcessId(),
                 process.expiresAt());
+    }
+
+    /**
+     * @param page página de procesos
+     * @return la página en la forma de la respuesta
+     */
+    public ReservationPageResponse toPage(PageResult<ReservationProcess> page) {
+        return new ReservationPageResponse(
+                page.content().stream().map(this::toResponse).toList(),
+                page.page(),
+                page.size(),
+                page.total(),
+                page.hasMore());
     }
 }

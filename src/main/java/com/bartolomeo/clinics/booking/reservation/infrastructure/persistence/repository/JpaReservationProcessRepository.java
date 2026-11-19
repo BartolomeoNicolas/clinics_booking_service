@@ -1,7 +1,10 @@
 package com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.repository;
 
+import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.persistence.entity.ReservationProcessEntity;
+import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -29,4 +32,37 @@ public interface JpaReservationProcessRepository
      * @return el proceso, si existe
      */
     Optional<ReservationProcessEntity> findByCatedraProcessId(String catedraProcessId);
+
+    /**
+     * Los procesos que no están en un estado cerrado.
+     *
+     * @param estadosCerrados los estados sin salida
+     * @return los procesos abiertos
+     */
+    List<ReservationProcessEntity> findByStatusNotIn(List<ReservationState> estadosCerrados);
+
+    /**
+     * Los procesos que la catedra marco como invalidos.
+     *
+     * @param estado el estado invalido
+     * @return los procesos invalidos
+     */
+    List<ReservationProcessEntity> findByStatus(ReservationState estado);
+
+    /**
+     * Los procesos de un usuario, de los más nuevos a los más viejos.
+     *
+     * @param userId   usuario dueño de los procesos
+     * @param pageable la página pedida
+     * @return los procesos de ese usuario
+     */
+    List<ReservationProcessEntity> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    /**
+     * Cuántos procesos tiene un usuario.
+     *
+     * @param userId usuario dueño de los procesos
+     * @return el total
+     */
+    long countByUserId(Long userId);
 }

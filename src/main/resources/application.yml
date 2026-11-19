@@ -23,11 +23,13 @@ spring:
       # puede no existir: lo que falla despues es el placeholder sin default.
       - "optional:file:.env[.properties]"
       # Ubicacion canonica, fuera del repo. CLINICS_SECRETS_DIR la sobreescribe.
-      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/booking.yml"
-      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/booking.yaml"
+      # Properties de VARIABLES DE ENTORNO: los placeholders de este archivo se
+      # resuelven con la variable, y el yaml del servicio gana sobre cualquier archivo
+      # importado, así que un yaml anidado no llegaría nunca.
+      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/booking[.properties]"
       # Valores compartidos con el servicio de catalogo: la audiencia del token
       # de sesion y donde esta la clave publica.
-      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/common.yml"
+      - "optional:file:${CLINICS_SECRETS_DIR:${user.home}/.config/clinics/secrets}/common[.properties]"
 
 server:
   port: 8082
@@ -46,6 +48,11 @@ springdoc:
     path: /swagger-ui.html
 
 clinics:
+  reservation:
+    # Cada cuanto se reconcilian los procesos pendientes con el estado real de
+    # la catedra. Al arrancar se corre una vez igual: esto es el periodico.
+    sweep-interval-ms: ${CLINICS_RESERVATION_SWEEP_INTERVAL_MS:60000}
+
   catalog:
     # URL del servicio de catalogo. En los tests de contrato se pisa desde afuera
     # para apuntar a WireMock. Es el unico valor de este bloque que no cambia por

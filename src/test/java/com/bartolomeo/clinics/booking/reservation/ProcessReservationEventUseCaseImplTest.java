@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -21,7 +23,7 @@ import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationEventE
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.ProcessReservationEventUseCase;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ProcessedEventRepository;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationProcessRepository;
-import com.bartolomeo.clinics.booking.reservation.domain.ports.out.ReservationRepository;
+import com.bartolomeo.clinics.booking.reservation.application.service.ReservationRegistrar;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationState;
 import java.time.Clock;
@@ -52,12 +54,12 @@ class ProcessReservationEventUseCaseImplTest {
     private static final LocalTime HORA = LocalTime.of(9, 30);
 
     private final ReservationProcessRepository repository = mock(ReservationProcessRepository.class);
-    private final ReservationRepository reservations = mock(ReservationRepository.class);
+    private final ReservationRegistrar registrar = mock(ReservationRegistrar.class);
     private final ProcessedEventRepository processedEvents = mock(ProcessedEventRepository.class);
     private final Clock clock = Clock.fixed(AHORA, ZoneOffset.UTC);
 
     private final ProcessReservationEventUseCase useCase = new ProcessReservationEventUseCaseImpl(
-            repository, reservations, processedEvents, new ReservationTransitions(), clock);
+            repository, registrar, processedEvents, new ReservationTransitions(), clock);
 
     private static ReservationProcess proceso(ReservationState estado) {
         return new ReservationProcess(
@@ -155,57 +157,36 @@ class ProcessReservationEventUseCaseImplTest {
 
         assertThat(error).isNotNull();
         verify(repository, never()).save(any(ReservationProcess.class));
-        verify(reservations, never()).save(any(Reservation.class));
+        verify(registrar, never()).registraConfirmacion(any(ReservationProcess.class), anyLong());
     }
 
     @Test
     @DisplayName("una confirmacion deja la reserva guardada")
     void unaConfirmacionDejaLaReservaGuardada() {
-        when(reservations.findByProcessId(7L)).thenReturn(Optional.empty());
-
         useCase.process(envelope("evento-7", ReservationEvent.CONFIRMED));
 
-        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
-        verify(reservations).save(captor.capture());
-
-        Reservation reserva = captor.getValue();
-        assertThat(reserva.catedraReservationId()).isEqualTo(8251L);
-        assertThat(reserva.processId()).isEqualTo(7L);
-        assertThat(reserva.userId()).isEqualTo(42L);
-        assertThat(reserva.professionalId()).isEqualTo(15L);
-        assertThat(reserva.date()).isEqualTo(DIA);
-        assertThat(reserva.startTime()).isEqualTo(HORA);
-        assertThat(reserva.status()).isEqualTo("CONFIRMED");
+        // La reserva la guarda el registrador, que es el que sabe que una por proceso.
+        verify(registrar).registraConfirmacion(any(ReservationProcess.class), eq(8251L));
     }
 
     @Test
-    @DisplayName("una confirmacion repetida no deja una segunda reserva")
+    @DisplayName("una confirmacion repetida vuelve a pedir la reserva pero no la duplica")
     void unaConfirmacionRepetidaNoDejaUnaSegundaReserva() {
-        when(reservations.findByProcessId(7L)).thenReturn(Optional.of(
-                new Reservation(
-                        1L, 8251L, 7L, 42L, 15L, DIA, HORA, null, "CONFIRMED",
-                        null, null, null, null, AHORA)));
-
         useCase.process(envelope("evento-8", ReservationEvent.CONFIRMED));
 
-        verify(reservations, never()).save(any(Reservation.class));
+        // Que no haya una segunda reserva lo garantiza el registrador, que mira si el proceso
+        // ya tiene una; aca se ve que la confirmacion se vuelve a pedir.
+        verify(registrar).registraConfirmacion(any(ReservationProcess.class), eq(8251L));
     }
 
     @Test
-    @DisplayName("una cancelacion cambia el estado de la reserva")
+    @DisplayName("una cancelacion cancela la reserva del proceso")
     void unaCancelacionCambiaElEstadoDeLaReserva() {
         when(repository.findByCatedraProcessId("process-a92b47d0"))
                 .thenReturn(Optional.of(proceso(ReservationState.CONFIRMED)));
-        when(reservations.findByProcessId(7L)).thenReturn(Optional.of(
-                new Reservation(
-                        1L, 8251L, 7L, 42L, 15L, DIA, HORA, null, "CONFIRMED",
-                        null, null, null, null, AHORA)));
 
         useCase.process(envelope("evento-9", ReservationEvent.CANCELLED));
 
-        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
-        verify(reservations).save(captor.capture());
-        assertThat(captor.getValue().status()).isEqualTo("CANCELLED");
-        assertThat(captor.getValue().createdAt()).isEqualTo(AHORA);
+        verify(registrar).registraCancelacion(any(ReservationProcess.class));
     }
 }

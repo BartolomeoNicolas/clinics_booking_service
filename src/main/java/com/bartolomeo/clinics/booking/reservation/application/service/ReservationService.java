@@ -1,8 +1,12 @@
 package com.bartolomeo.clinics.booking.reservation.application.service;
 
+import com.bartolomeo.clinics.booking.reservation.domain.model.PageResult;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.in.CancelReservationUseCase;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.CreateReservationUseCase;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.in.GetReservationProcessUseCase;
+import com.bartolomeo.clinics.booking.reservation.domain.ports.in.ListMyReservationsUseCase;
 import com.bartolomeo.clinics.booking.reservation.domain.ports.in.SubmitPhoneUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,9 @@ public class ReservationService {
 
     private final CreateReservationUseCase createReservationUseCase;
     private final SubmitPhoneUseCase submitPhoneUseCase;
+    private final ListMyReservationsUseCase listMyReservationsUseCase;
+    private final GetReservationProcessUseCase getReservationUseCase;
+    private final CancelReservationUseCase cancelReservationUseCase;
 
     /**
      * Inicia un proceso de reserva para el usuario de la sesión.
@@ -52,5 +59,40 @@ public class ReservationService {
      */
     public ReservationProcess submitPhone(long processId, String login, String phone) {
         return submitPhoneUseCase.submitPhone(processId, login, phone);
+    }
+
+    /**
+     * Las reservas del usuario de la sesión, paginadas.
+     *
+     * @param login usuario de la sesión
+     * @param page  número de página, empezando en cero
+     * @param size  tamaño de la página
+     * @return la página de procesos
+     */
+    public PageResult<ReservationProcess> listMyReservations(String login, int page, int size) {
+        return listMyReservationsUseCase.list(login, page, size);
+    }
+
+    /**
+     * El estado de una reserva del usuario de la sesión.
+     *
+     * @param processId identificador local del proceso
+     * @param login    usuario de la sesión
+     * @return el proceso
+     */
+    public ReservationProcess getReservation(long processId, String login) {
+        return getReservationUseCase.get(processId, login);
+    }
+
+    /**
+     * Cancela una reserva del usuario de la sesión.
+     *
+     * @param processId identificador local del proceso
+     * @param login    usuario de la sesión
+     * @param reason   motivo de la cancelación; puede ser nulo
+     * @return el proceso, ya cancelado
+     */
+    public ReservationProcess cancelReservation(long processId, String login, String reason) {
+        return cancelReservationUseCase.cancel(processId, login, reason);
     }
 }

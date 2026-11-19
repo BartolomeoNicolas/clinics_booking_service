@@ -47,6 +47,54 @@ public interface ReservationProcessRepository {
     Optional<ReservationProcess> findByCatedraProcessId(String catedraProcessId);
 
     /**
+     * Los procesos que todavía no llegaron a un estado cerrado.
+     *
+     * <p><strong>"Abiertos" no es lo mismo que "pendientes de hacer".</strong> Un proceso
+     * confirmado sigue abierto —se puede cancelar— y uno que espera el teléfono también. Lo
+     * que no está abierto es un proceso que ya no admite ningún movimiento: cancelado,
+     * vencido, inválido o fallido.
+     *
+     * <p>Es lo que recorre la reconciliación: los procesos cerrados no se tocan y los
+     * abiertos se comparan contra el estado real de la cátedra.
+     *
+     * @return los procesos abiertos
+     */
+    java.util.List<ReservationProcess> findOpen();
+
+    /**
+     * Los procesos que la cátedra marcó como inválidos.
+     *
+     * <p><strong>No están en {@link #findOpen()} y también hay que mirarlos.</strong> Un
+     * proceso inválido está cerrado —ningún evento lo mueve— pero su estado real sigue sin
+     * confirmarse: la cátedra dijo que hay una inconsistencia y todavía no se le preguntó cuál
+     * es el estado persistido (anexo §15.9).
+     *
+     * @return los procesos inválidos
+     */
+    java.util.List<ReservationProcess> findInvalid();
+
+    /**
+     * Los procesos de un usuario, en una página.
+     *
+     * <p><strong>El usuario es parte de la consulta, no un filtro opcional.</strong> Es lo que
+     * garantiza el aislamiento: no hay forma de pedir los procesos de otro.
+     *
+     * @param userId usuario dueño de los procesos
+     * @param page   número de página, empezando en cero
+     * @param size   tamaño de la página
+     * @return los procesos de ese usuario
+     */
+    java.util.List<ReservationProcess> findByUserId(long userId, int page, int size);
+
+    /**
+     * Cuántos procesos tiene un usuario.
+     *
+     * @param userId usuario dueño de los procesos
+     * @return el total
+     */
+    long countByUserId(long userId);
+
+    /**
      * Guarda el proceso.
      *
      * @param process proceso a guardar

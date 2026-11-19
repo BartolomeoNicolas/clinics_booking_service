@@ -1,9 +1,12 @@
 package com.bartolomeo.clinics.booking.reservation.infrastructure.web.controller;
 
 import com.bartolomeo.clinics.booking.reservation.application.service.ReservationService;
+import com.bartolomeo.clinics.booking.reservation.domain.model.PageResult;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationData;
 import com.bartolomeo.clinics.booking.reservation.domain.model.ReservationProcess;
+import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.CancelReservationRequest;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.CreateReservationRequest;
+import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.ReservationPageResponse;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.ReservationProcessResponse;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.dto.SubmitPhoneRequest;
 import com.bartolomeo.clinics.booking.reservation.infrastructure.web.mapper.ReservationDtoMapper;
@@ -12,11 +15,13 @@ import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -76,6 +81,60 @@ public class ReservationController {
 
         ReservationProcess process = reservationService.submitPhone(
                 processId, principal.getName(), request.phoneNumber());
+
+        return ResponseEntity.ok(reservationDtoMapper.toResponse(process));
+    }
+
+    /**
+     * Las reservas del usuario de la sesión, paginadas.
+     *
+     * <p><strong>No hay filtro por usuario en la consulta.</strong> El usuario sale del token
+     * y la consulta se arma con él: pedir las reservas de otro no es una operación que exista.
+     */
+    @GetMapping
+    public ResponseEntity<ReservationPageResponse> list(
+            Principal principal,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
+
+        PageResult<ReservationProcess> resultado =
+                reservationService.listMyReservations(principal.getName(), page, size);
+
+        return ResponseEntity.ok(reservationDtoMapper.toPage(resultado));
+    }
+
+    /**
+     * El estado de una reserva del usuario de la sesión.
+     *
+     * <p>Un proceso de otro usuario responde 404, no 403: confirmar que existe ya es filtrar
+     * información.
+     */
+    @GetMapping("/{processId}")
+    public ResponseEntity<ReservationProcessResponse> get(
+            Principal principal,
+            @PathVariable("processId") long processId) {
+
+        ReservationProcess process =
+                reservationService.getReservation(processId, principal.getName());
+
+        return ResponseEntity.ok(reservationDtoMapper.toResponse(process));
+    }
+
+    /**
+     * Cancela una reserva del usuario de la sesión.
+     *
+     * <p><strong>Cancelar dos veces devuelve el estado actual.</strong> El botón de cancelar
+     * puede pulsarse dos veces y la segunda no rompe nada.
+     */
+    @PostMapping("/{processId}/cancel")
+    public ResponseEntity<ReservationProcessResponse> cancel(
+            Principal principal,
+            @PathVariable("processId") long processId,
+            @RequestBody(required = false) CancelReservationRequest request) {
+
+        String reason = request == null ? null : request.reason();
+        ReservationProcess process =
+                reservationService.cancelReservation(processId, principal.getName(), reason);
 
         return ResponseEntity.ok(reservationDtoMapper.toResponse(process));
     }
